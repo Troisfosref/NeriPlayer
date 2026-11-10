@@ -20,7 +20,7 @@ class QQMusicProtocolTest {
 
     @Test fun `media MID owns filenames when different from catalog MID`() {
         val names = qqFilenames("M800", "mp3", "catalogMid", "fileMid")
-        assertEquals(listOf("M800fileMid.mp3", "M800fileMidfileMid.mp3"), names)
+        assertEquals(listOf("M800fileMid.mp3", "M800fileMidfileMid.mp3", "M800catalogMid.mp3", "M800catalogMidcatalogMid.mp3"), names)
         assertFalse(names.any { it.contains("catalogMid") })
     }
 
@@ -35,6 +35,19 @@ class QQMusicProtocolTest {
         assertTrue(qqPlaybackUrls(response("https://isure.stream.qqmusic.qq.com/", "M800file.mp3?src=preview")).isEmpty())
         assertTrue(qqPlaybackUrls(response("https://isure.stream.qqmusic.qq.com/", "C400trial.m4a")).isEmpty())
         assertTrue(qqPlaybackUrls(response("https://isure.stream.qqmusic.qq.com/", "M800file.mp3", 1)).isEmpty())
+    }
+
+    @Test fun `upstream ticket refusal can be diagnosed without exposing URL`() {
+        val response = JSONObject().put("midurlinfo", JSONArray().put(
+            JSONObject().put("result", 104003).put("purl", "")))
+        assertEquals(104003, qqPlaybackRefusalCode(response))
+        assertNull(qqPlaybackRefusalCode(JSONObject().put("midurlinfo", JSONArray())))
+    }
+
+    @Test fun `missing sip entries get a Tencent CDN fallback`() {
+        val response = JSONObject().put("sip", JSONArray()).put("midurlinfo", JSONArray().put(
+            JSONObject().put("result", 0).put("purl", "M500song.mp3?vkey=fixture")))
+        assertEquals(listOf("https://ws.stream.qqmusic.qq.com/M500song.mp3?vkey=fixture"), qqPlaybackUrls(response))
     }
 
     @Test fun `quality fallback never upgrades the requested tier`() {

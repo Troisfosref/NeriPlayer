@@ -14,7 +14,7 @@ import org.junit.Test
 import org.mockito.Mockito
 
 class QQMusicPlaybackTest {
-    @Test fun `enhanced endpoint is first and includes authenticated full stream parameters`() = runBlocking {
+    @Test fun `standard vkey is first with authenticated web envelope`() = runBlocking {
         val calls=mutableListOf<JSONObject>()
         val http=OkHttpClient.Builder().addInterceptor { chain ->
             val b=Buffer();requireNotNull(chain.request().body).writeTo(b)
@@ -22,7 +22,7 @@ class QQMusicPlaybackTest {
             val data=JSONObject().put("sip",JSONArray().put("https://isure.stream.qqmusic.qq.com/"))
                 .put("midurlinfo",JSONArray().put(JSONObject().put("result",0).put("purl","M500mediaFile.mp3?vkey=fixture")))
             Response.Builder().request(chain.request()).protocol(Protocol.HTTP_1_1).code(200).message("OK")
-                .body(JSONObject().put("code",0).put("req_1",JSONObject().put("code",0).put("data",data)).toString().toResponseBody()).build()
+                .body(JSONObject().put("code",0).put("req_0",JSONObject().put("code",0).put("data",data)).toString().toResponseBody()).build()
         }.build()
         val account=Mockito.mock(QQMusicAccountRepository::class.java)
         Mockito.`when`(account.cookie()).thenReturn("musicid=123; musickey=fixture")
@@ -31,10 +31,10 @@ class QQMusicPlaybackTest {
         val result=QQMusicRepository(account,QQMusicClient(http)).playback(song)
         assertEquals("standard",result.audioInfo?.qualityKey)
         assertEquals(1,calls.size)
-        assertEquals("music.vkey.GetEVkey",calls[0].getJSONObject("req_1").getString("module"))
-        assertEquals("CgiGetEVkey",calls[0].getJSONObject("req_1").getString("method"))
-        assertEquals(1,calls[0].getJSONObject("req_1").getJSONObject("param").getInt("xcdn"))
-        assertEquals(24,calls[0].getJSONObject("comm").getInt("ct"))
+        assertEquals("vkey.GetVkeyServer",calls[0].getJSONObject("req_0").getString("module"))
+        assertEquals("CgiGetVkey",calls[0].getJSONObject("req_0").getString("method"))
+        assertFalse(calls[0].getJSONObject("req_0").getJSONObject("param").has("xcdn"))
+        assertEquals(19,calls[0].getJSONObject("comm").getInt("ct"))
     }
 
     @Test fun `unavailable higher qualities fall back and carry the real quality label`() = runBlocking {
@@ -44,11 +44,11 @@ class QQMusicPlaybackTest {
             requireNotNull(chain.request().body).writeTo(buffer)
             val body = JSONObject(buffer.readUtf8())
             requests += body
-            val prefix = body.getJSONObject("req_1").getJSONObject("param").getJSONArray("filename").getString(0).take(4)
+            val prefix = (body.optJSONObject("req_0") ?: body.getJSONObject("req_1")).getJSONObject("param").getJSONArray("filename").getString(0).take(4)
             val data = JSONObject().put("sip", JSONArray().put("https://isure.stream.qqmusic.qq.com/"))
                 .put("midurlinfo", JSONArray().put(JSONObject().put("result", 0)
                     .put("purl", if (prefix == "M500") "M500actualFile.mp3?vkey=fixture" else "")))
-            val result = JSONObject().put("code", 0).put("req_1", JSONObject().put("code", 0).put("data", data))
+            val result = JSONObject().put("code", 0).put(if (body.has("req_0")) "req_0" else "req_1", JSONObject().put("code", 0).put("data", data))
             Response.Builder().request(chain.request()).protocol(Protocol.HTTP_1_1).code(200).message("OK")
                 .body(result.toString().toResponseBody("application/json".toMediaType())).build()
         }.build()
@@ -60,8 +60,8 @@ class QQMusicPlaybackTest {
         val result = repository.playback(song)
         assertEquals("standard", result.audioInfo?.qualityKey)
         assertEquals(listOf("F000", "F000", "F000", "F000", "M800", "M800", "M800", "M800", "M500"), requests.map {
-            it.getJSONObject("req_1").getJSONObject("param").getJSONArray("filename").getString(0).take(4) })
-        assertTrue(requests.all { it.getJSONObject("req_1").getJSONObject("param").getString("uin") == "456" })
+            (it.optJSONObject("req_0") ?: it.getJSONObject("req_1")).getJSONObject("param").getJSONArray("filename").getString(0).take(4) })
+        assertTrue(requests.all { (it.optJSONObject("req_0") ?: it.getJSONObject("req_1")).getJSONObject("param").getString("uin") == "456" })
     }
 
     @Test fun `signed M8F000 CDN name resolves as full lossless audio`() = runBlocking {
@@ -70,7 +70,7 @@ class QQMusicPlaybackTest {
                 .put("midurlinfo", JSONArray().put(JSONObject().put("result", 0)
                     .put("purl", "M8F000signed.flac?vkey=fixture")))
             Response.Builder().request(chain.request()).protocol(Protocol.HTTP_1_1).code(200).message("OK")
-                .body(JSONObject().put("code",0).put("req_1",
+                .body(JSONObject().put("code",0).put("req_0",
                     JSONObject().put("code",0).put("data",data)).toString().toResponseBody()).build()
         }.build()
         val account=Mockito.mock(QQMusicAccountRepository::class.java)
@@ -104,14 +104,15 @@ class QQMusicPlaybackTest {
         val http=OkHttpClient.Builder().addInterceptor { chain ->
             val b=Buffer();requireNotNull(chain.request().body).writeTo(b)
             val body=JSONObject(b.readUtf8());requests+=body
-            val p=body.getJSONObject("req_1").getJSONObject("param")
+            val req=body.optJSONObject("req_0") ?: body.getJSONObject("req_1")
+            val p=req.getJSONObject("param")
             val compat=p.getString("platform")=="20"
-            val enhanced=body.getJSONObject("req_1").getString("method")=="CgiGetEVkey"
-            val path=if(compat && !enhanced) "F000002sg0214BnHfE.flac?vkey=fixture" else "M500002sg0214BnHfE.mp3?vkey=fixture"
+            val enhanced=req.getString("method")=="CgiGetEVkey"
+            val path=if(enhanced) "F000002sg0214BnHfE.flac?vkey=fixture" else "M500002sg0214BnHfE.mp3?vkey=fixture"
             val data=JSONObject().put("sip",JSONArray().put("https://isure.stream.qqmusic.qq.com/"))
                 .put("midurlinfo",JSONArray().put(JSONObject().put("result",0).put("purl",path)))
             Response.Builder().request(chain.request()).protocol(Protocol.HTTP_1_1).code(200).message("OK")
-                .body(JSONObject().put("code",0).put("req_1",JSONObject().put("code",0).put("data",data)).toString().toResponseBody()).build()
+                .body(JSONObject().put("code",0).put(if(body.has("req_0")) "req_0" else "req_1",JSONObject().put("code",0).put("data",data)).toString().toResponseBody()).build()
         }.build()
         val accounts=Mockito.mock(QQMusicAccountRepository::class.java)
         Mockito.`when`(accounts.cookie()).thenReturn("musicid=123; musickey=fixture")
@@ -120,9 +121,9 @@ class QQMusicPlaybackTest {
         val result=QQMusicRepository(accounts,QQMusicClient(http)).playback(song)
         assertEquals("lossless",result.audioInfo?.qualityKey)
         assertEquals(2,requests.size)
-        assertEquals("CgiGetVkey",requests.last().getJSONObject("req_1").getString("method"))
+        assertEquals("CgiGetEVkey",requests.last().getJSONObject("req_1").getString("method"))
         val param=requests.last().getJSONObject("req_1").getJSONObject("param")
-        assertEquals("20",param.getString("platform"));assertFalse(param.has("quality"));assertFalse(param.has("h5queryversion"))
+        assertEquals("20",param.getString("platform"));assertEquals(1,param.getInt("xcdn"));assertFalse(param.has("quality"))
         assertEquals("001exNOg2q7sDE",param.getJSONArray("songmid").getString(0))
         assertEquals("F000002sg0214BnHfE.flac",param.getJSONArray("filename").getString(0))
     }
@@ -138,9 +139,9 @@ class QQMusicPlaybackTest {
                     .put("track_info",JSONObject().put("mid","001exNOg2q7sDE").put("type",0)
                         .put("file",JSONObject().put("media_mid","002sg0214BnHfE")))))
             } else {
-                val p=body.getJSONObject("req_1").getJSONObject("param")
+                val p=(body.optJSONObject("req_0") ?: body.getJSONObject("req_1")).getJSONObject("param")
                 val valid=p.getJSONArray("filename").getString(0).contains("002sg0214BnHfE")
-                result.put("req_1",JSONObject().put("code",0).put("data",JSONObject()
+                result.put(if(body.has("req_0")) "req_0" else "req_1",JSONObject().put("code",0).put("data",JSONObject()
                     .put("sip",JSONArray().put("https://isure.stream.qqmusic.qq.com/"))
                     .put("midurlinfo",JSONArray().put(JSONObject().put("result",0)
                         .put("purl",if(valid) "M500002sg0214BnHfE.mp3?vkey=fixture" else "")))))
