@@ -64,6 +64,22 @@ class QQMusicPlaybackTest {
         assertTrue(requests.all { it.getJSONObject("req_1").getJSONObject("param").getString("uin") == "456" })
     }
 
+    @Test fun `signed M8F000 CDN name resolves as full lossless audio`() = runBlocking {
+        val http = OkHttpClient.Builder().addInterceptor { chain ->
+            val data = JSONObject().put("sip", JSONArray().put("https://isure.stream.qqmusic.qq.com/"))
+                .put("midurlinfo", JSONArray().put(JSONObject().put("result", 0)
+                    .put("purl", "M8F000signed.flac?vkey=fixture")))
+            Response.Builder().request(chain.request()).protocol(Protocol.HTTP_1_1).code(200).message("OK")
+                .body(JSONObject().put("code",0).put("req_1",
+                    JSONObject().put("code",0).put("data",data)).toString().toResponseBody()).build()
+        }.build()
+        val account=Mockito.mock(QQMusicAccountRepository::class.java)
+        Mockito.`when`(account.cookie()).thenReturn("musicid=123; musickey=fixture")
+        Mockito.`when`(account.quality()).thenReturn(QQMusicQuality.LOSSLESS)
+        val song=requireNotNull(mapQQMusicSong(JSONObject("""{"mid":"catalog","file":{"media_mid":"file"}}""")))
+        assertEquals("lossless",QQMusicRepository(account,QQMusicClient(http)).playback(song).audioInfo?.qualityKey)
+    }
+
     @Test fun `expired login stops fallback without issuing more tickets`() = runBlocking {
         var count = 0
         val http = OkHttpClient.Builder().addInterceptor { chain ->

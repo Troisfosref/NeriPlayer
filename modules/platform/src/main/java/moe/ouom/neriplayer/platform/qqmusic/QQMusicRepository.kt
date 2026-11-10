@@ -44,7 +44,12 @@ class QQMusicRepository(val accounts: QQMusicAccountRepository, private val clie
             for (quality in accounts.quality().fallback()) {
                 suspend fun candidates(compatibility: Boolean, enhanced: Boolean = false): List<String> = try {
                     qqPlaybackUrls(client.playback(ref.mid, ref.mediaMid, ref.songType, quality, cookie, compatibility, enhanced))
-                        .filter { java.net.URI(it).path.substringAfterLast('/').startsWith(quality.prefix) }
+                        .filter {
+                            val name = java.net.URI(it).path.substringAfterLast('/')
+                            // Signed CDN stream names can be prefixed with M8 (e.g. M8F000...flac)
+                            // even though the requested file is F000...flac.
+                            name.startsWith(quality.prefix) || name.startsWith("M8${quality.prefix}")
+                        }
                 } catch (error: QQMusicException) {
                     if (error.kind != QQMusicException.Kind.REQUEST_FAILED) throw error
                     emptyList()
