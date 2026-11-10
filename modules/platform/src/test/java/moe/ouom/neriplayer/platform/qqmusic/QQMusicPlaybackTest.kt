@@ -59,7 +59,7 @@ class QQMusicPlaybackTest {
         val song = requireNotNull(mapQQMusicSong(JSONObject("""{"mid":"catalogMid","file":{"media_mid":"actualFile"}}""")))
         val result = repository.playback(song)
         assertEquals("standard", result.audioInfo?.qualityKey)
-        assertEquals(listOf("F000", "F000", "F000", "M800", "M800", "M800", "M500"), requests.map {
+        assertEquals(listOf("F000", "F000", "F000", "F000", "M800", "M800", "M800", "M800", "M500"), requests.map {
             it.getJSONObject("req_1").getJSONObject("param").getJSONArray("filename").getString(0).take(4) })
         assertTrue(requests.all { it.getJSONObject("req_1").getJSONObject("param").getString("uin") == "456" })
     }
@@ -119,7 +119,8 @@ class QQMusicPlaybackTest {
         val song=requireNotNull(mapQQMusicSong(JSONObject("""{"mid":"001exNOg2q7sDE","title":"茜さす","file":{"media_mid":"002sg0214BnHfE"}}""")))
         val result=QQMusicRepository(accounts,QQMusicClient(http)).playback(song)
         assertEquals("lossless",result.audioInfo?.qualityKey)
-        assertEquals(3,requests.size)
+        assertEquals(2,requests.size)
+        assertEquals("CgiGetVkey",requests.last().getJSONObject("req_1").getString("method"))
         val param=requests.last().getJSONObject("req_1").getJSONObject("param")
         assertEquals("20",param.getString("platform"));assertFalse(param.has("quality"));assertFalse(param.has("h5queryversion"))
         assertEquals("001exNOg2q7sDE",param.getJSONArray("songmid").getString(0))

@@ -55,7 +55,9 @@ class QQMusicRepository(val accounts: QQMusicAccountRepository, private val clie
                     emptyList()
                 }
                 val urls = candidates(false, enhanced = true).ifEmpty {
-                    candidates(false).ifEmpty { candidates(true) }
+                    candidates(true, enhanced = true).ifEmpty {
+                        candidates(false).ifEmpty { candidates(true) }
+                    }
                 }
                 if (urls.isEmpty()) continue
                 return@withLock SongUrlResult.Success(

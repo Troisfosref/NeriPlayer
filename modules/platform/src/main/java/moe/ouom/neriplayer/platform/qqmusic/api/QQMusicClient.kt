@@ -42,15 +42,23 @@ class QQMusicClient(private val client: OkHttpClient) {
             .put("platform", if (compatibility || enhanced) "20" else "23").put("quality", quality.prefix).put("h5queryversion", 1)
             .put("nettype", "").put("cms", 0).put("firstlogin", 1).put("newver", 1).put("nohash", 0)
         if (compatibility || enhanced) listOf("quality", "h5queryversion", "nettype", "cms", "firstlogin", "newver", "nohash").forEach(params::remove)
-        if (enhanced) params.put("xcdn", 1)
+        if (enhanced && !compatibility) params.put("xcdn", 1)
         // Some accounts can retrieve full streams with EVkey when legacy vkey returns no purl.
         val enhancedComm = if (enhanced) JSONObject().put("ct", 24).put("cv", 0)
             .put("format", "json").put("uin", qqAccountId(cookie).ifBlank { "0" })
             .put("authst", qqMusicKey(cookie))
             .put("tmeLoginType", qqComm(cookie).optInt("tmeLoginType", 2)) else null
         return post("req_1",
-            if (enhanced) "music.vkey.GetEVkey" else "music.vkey.GetVkey",
-            if (enhanced) "CgiGetEVkey" else "UrlGetVkey",
+            when {
+                enhanced && compatibility -> "vkey.GetVkeyServer"
+                enhanced -> "music.vkey.GetEVkey"
+                else -> "music.vkey.GetVkey"
+            },
+            when {
+                enhanced && compatibility -> "CgiGetVkey"
+                enhanced -> "CgiGetEVkey"
+                else -> "UrlGetVkey"
+            },
             params, cookie, compatibility || enhanced, enhancedComm)
     }
 
