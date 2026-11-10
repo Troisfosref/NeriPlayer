@@ -376,7 +376,13 @@ fun LibraryScreen(
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         LargeTopAppBar(
-            title = { Text(stringResource(CoreCommonR.string.library_title)) },
+            title = {
+                Text(
+                    stringResource(CoreCommonR.string.library_title),
+                    modifier = Modifier.padding(start = 8.dp),
+                    style = MaterialTheme.typography.headlineMedium
+                )
+            },
             scrollBehavior = scrollBehavior,
             colors = TopAppBarDefaults.topAppBarColors(
                 containerColor = Color.Transparent,

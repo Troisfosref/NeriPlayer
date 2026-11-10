@@ -40,12 +40,14 @@ internal fun QQMusicPlaylist.summary() = PlaylistSummary(id.toLongOrNull() ?: -(
 fun QQMusicLibraryContent(listState: LazyListState, vm: QQMusicBrowseViewModel = viewModel()) {
     val account by vm.account.collectAsStateWithLifecycle()
     val profile by vm.profile.collectAsStateWithLifecycle()
+    val liked by vm.liked.collectAsStateWithLifecycle()
     val created by vm.created.collectAsStateWithLifecycle()
     val collected by vm.collected.collectAsStateWithLifecycle()
     val open=LocalQQPlaylistOpen.current
     val context=LocalContext.current
     val shape=neriRoundedShape(12.dp)
-    LazyColumn(state=listState,modifier=Modifier.fillMaxSize(),contentPadding=PaddingValues(bottom=LocalMiniPlayerHeight.current+24.dp)) {
+    LazyColumn(state=listState,modifier=Modifier.fillMaxSize(),
+        contentPadding=PaddingValues(start=8.dp,end=8.dp,top=8.dp,bottom=LocalMiniPlayerHeight.current+24.dp)) {
         if(!account.signedIn) item { Text(stringResource(CoreR.string.qq_browse_login),Modifier.padding(24.dp)) }
         else {
             item {
@@ -55,13 +57,23 @@ fun QQMusicLibraryContent(listState: LazyListState, vm: QQMusicBrowseViewModel =
                     colors=ListItemDefaults.colors(containerColor=Color.Transparent))
             }
             item {
-                val p=QQMusicPlaylist("favorites",stringResource(CoreR.string.qq_browse_liked),directory=201)
-                NeteasePlaylistRow(p.summary(),shape,context,{open(p)},false,supportingText=stringResource(CoreR.string.settings_qq_music))
+                val p=(liked.data ?: QQMusicPlaylist("favorites",stringResource(CoreR.string.qq_browse_liked),directory=201))
+                    .copy(title=stringResource(CoreR.string.qq_browse_liked),
+                        cover=liked.data?.cover ?: profile.data?.avatar)
+                NeteasePlaylistRow(p.summary(),shape,context,{open(p)},false,
+                    supportingText=if(liked.data != null) stringResource(CoreR.string.qq_browse_count,p.count)
+                        else stringResource(CoreR.string.settings_qq_music))
             }
-            item { SectionHeader(Icons.Outlined.Star,stringResource(CoreR.string.qq_browse_created));QQLoadNotice(created.loading,created.failed,created.data?.isEmpty()==true,vm::refresh) }
-            items(created.data.orEmpty(),key={"created:${it.id}"}) { p -> NeteasePlaylistRow(p.summary(),shape,context,{open(p)},false) }
-            item { SectionHeader(Icons.Outlined.Star,stringResource(CoreR.string.qq_browse_collected));QQLoadNotice(collected.loading,collected.failed,collected.data?.isEmpty()==true,vm::refresh) }
-            items(collected.data.orEmpty(),key={"collected:${it.id}"}) { p -> NeteasePlaylistRow(p.summary(),shape,context,{open(p)},false) }
+            item { QQMusicLibrarySectionTitle(stringResource(CoreR.string.qq_browse_created));QQLoadNotice(created.loading,created.failed,created.data?.isEmpty()==true,vm::refresh) }
+            items(created.data.orEmpty(),key={"created:${it.id}"}) { p ->
+                NeteasePlaylistRow(p.summary(),shape,context,{open(p)},false,
+                    supportingText=stringResource(CoreR.string.qq_browse_count,p.count))
+            }
+            item { QQMusicLibrarySectionTitle(stringResource(CoreR.string.qq_browse_collected));QQLoadNotice(collected.loading,collected.failed,collected.data?.isEmpty()==true,vm::refresh) }
+            items(collected.data.orEmpty(),key={"collected:${it.id}"}) { p ->
+                NeteasePlaylistRow(p.summary(),shape,context,{open(p)},false,
+                    supportingText=stringResource(CoreR.string.qq_browse_count,p.count))
+            }
         }
     }
 }
@@ -89,14 +101,40 @@ internal fun QQMusicHomeContent(refreshKey: Int, favoriteSongLookup: FavoriteSon
         }
         SectionHeader(Icons.Outlined.Star,"${stringResource(CoreR.string.settings_qq_music)} · ${stringResource(CoreR.string.qq_browse_recommended)}")
         QQLoadNotice(recommended.loading,recommended.failed,recommended.data?.isEmpty()==true,vm::refresh)
-        recommended.data.orEmpty().chunked(2).forEach { row ->
-            Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(14.dp)) {
-                row.forEach { p -> Box(Modifier.weight(1f)) { PlaylistCard(p.summary(),favoriteKeys.contains("qqmusic:${p.summary().id}"),{open(p)},onShowSnackbar,source="qqmusic") } }
-                if(row.size==1)Spacer(Modifier.weight(1f))
+        val recommendedPlaylists = recommended.data.orEmpty()
+        if (recommendedPlaylists.isNotEmpty()) {
+            LazyRow(
+                modifier = Modifier.fillMaxWidth(),
+                contentPadding = PaddingValues(horizontal = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                items(recommendedPlaylists, key={it.id}) { p ->
+                    val summary = p.summary()
+                    RadarPlaylistCard(
+                        playlist=summary,
+                        isFavorite=favoriteKeys.contains("qqmusic:${summary.id}"),
+                        onClick={open(p)},
+                        onShowSnackbar=onShowSnackbar,
+                        offlineMode=false,
+                        modifier=Modifier.width(148.dp),
+                        source="qqmusic",
+                        badgeText=stringResource(CoreR.string.qq_browse_recommended),
+                        countText=stringResource(CoreR.string.qq_browse_count,p.count)
+                    )
+                }
             }
-            Spacer(Modifier.height(14.dp))
         }
     }
+}
+
+@Composable
+private fun QQMusicLibrarySectionTitle(title: String) {
+    Text(
+        title,
+        modifier = Modifier.fillMaxWidth().padding(start=16.dp,top=18.dp,bottom=8.dp),
+        style = MaterialTheme.typography.titleMedium,
+        color = MaterialTheme.colorScheme.onSurface
+    )
 }
 
 @Composable

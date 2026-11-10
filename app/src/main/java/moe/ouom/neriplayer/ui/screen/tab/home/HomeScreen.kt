@@ -1305,13 +1305,16 @@ private fun RadarPlaylistStrip(
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun RadarPlaylistCard(
+internal fun RadarPlaylistCard(
     playlist: PlaylistSummary,
     isFavorite: Boolean,
     onClick: () -> Unit,
     onShowSnackbar: (String) -> Unit,
     offlineMode: Boolean,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    source: String = "netease",
+    badgeText: String? = null,
+    countText: String? = null
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -1357,7 +1360,7 @@ private fun RadarPlaylistCard(
                 )
             }
             Text(
-                text = stringResource(CoreCommonR.string.home_netease_radar_badge),
+                text = badgeText ?: stringResource(CoreCommonR.string.home_netease_radar_badge),
                 modifier = Modifier
                     .align(Alignment.TopStart)
                     .padding(8.dp)
@@ -1379,7 +1382,7 @@ private fun RadarPlaylistCard(
                 style = MaterialTheme.typography.titleSmall
             )
             Text(
-                text = stringResource(
+                text = countText ?: stringResource(
                     CoreCommonR.string.home_play_count_format,
                     formatPlayCount(context, playlist.playCount),
                     playlist.trackCount
@@ -1419,7 +1422,7 @@ private fun RadarPlaylistCard(
                     showMenu = false
                     scope.launch {
                         if (isFavorite) {
-                            favoriteRepo.removeFavorite(playlist.id, "netease")
+                            favoriteRepo.removeFavorite(playlist.id, source)
                             onShowSnackbar(unfavoritedText)
                         } else {
                             favoriteRepo.addFavorite(
@@ -1427,7 +1430,7 @@ private fun RadarPlaylistCard(
                                 name = playlist.name,
                                 coverUrl = playlist.picUrl,
                                 trackCount = playlist.trackCount,
-                                source = "netease",
+                                source = source,
                                 songs = emptyList()
                             )
                             onShowSnackbar(favoriteSuccessText)
