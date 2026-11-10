@@ -31,29 +31,39 @@ class QQMusicRepository(val accounts: QQMusicAccountRepository, private val clie
     }
 
     suspend fun playback(song: SongItem): SongUrlResult.Success = ticketMutex.withLock {
-        val ref = QQMusicSongRef.from(song) ?: throw QQMusicException(QQMusicException.Kind.NO_PLAY_URL)
+        var ref = QQMusicSongRef.from(song) ?: throw QQMusicException(QQMusicException.Kind.NO_PLAY_URL)
         val cookie = accounts.cookie()
-        val mediaMid = ref.mediaMid.ifBlank {
-            client.songDetail(ref.mid, cookie).optJSONObject("file")?.optString("media_mid").orEmpty()
+        var refreshed = false
+        suspend fun refresh() {
+            val detail = client.songDetail(ref.mid, cookie)
+            ref = QQMusicSongRef(ref.mid, detail.optJSONObject("file")?.optString("media_mid").orEmpty(), detail.optInt("type", ref.songType))
+            refreshed = true
         }
-        for (quality in accounts.quality().fallback()) {
-            val data = client.playback(ref.mid, mediaMid, ref.songType, quality, cookie)
-            val primaryUrls = qqPlaybackUrls(data)
-            val candidates = primaryUrls.ifEmpty {
-                qqPlaybackUrls(client.playback(ref.mid, mediaMid, ref.songType, quality, cookie, compatibility = true))
+        if (ref.mediaMid.isBlank()) refresh()
+        repeat(2) {
+            for (quality in accounts.quality().fallback()) {
+                suspend fun candidates(compatibility: Boolean): List<String> = try {
+                    qqPlaybackUrls(client.playback(ref.mid, ref.mediaMid, ref.songType, quality, cookie, compatibility))
+                        .filter { java.net.URI(it).path.substringAfterLast('/').startsWith(quality.prefix) }
+                } catch (error: QQMusicException) {
+                    if (error.kind != QQMusicException.Kind.REQUEST_FAILED) throw error
+                    emptyList()
+                }
+                val urls = candidates(false).ifEmpty { candidates(true) }
+                if (urls.isEmpty()) continue
+                return@withLock SongUrlResult.Success(
+                    url = urls.first(), candidateUrls = urls.drop(1), mimeType = quality.mimeType,
+                    durationMs = song.durationMs.takeIf { it > 0 },
+                    representationIdentity = "qqmusic:${ref.mid}:${quality.name}",
+                    audioInfo = PlaybackAudioInfo(source = PlaybackAudioSource.QQ_MUSIC,
+                        qualityKey = quality.name.lowercase(), qualityLabel = quality.name,
+                        mimeType = quality.mimeType, codecLabel = quality.extension.uppercase(), bitrateKbps = quality.bitrateKbps)
+                )
             }
-            val urls = candidates.filter { url ->
-                java.net.URI(url).path.substringAfterLast('/').startsWith(quality.prefix)
-            }
-            if (urls.isEmpty()) continue
-            return@withLock SongUrlResult.Success(
-                url = urls.first(), candidateUrls = urls.drop(1), mimeType = quality.mimeType,
-                durationMs = song.durationMs.takeIf { it > 0 },
-                representationIdentity = "qqmusic:${ref.mid}:${quality.name}",
-                audioInfo = PlaybackAudioInfo(source = PlaybackAudioSource.QQ_MUSIC,
-                    qualityKey = quality.name.lowercase(), qualityLabel = quality.name,
-                    mimeType = quality.mimeType, codecLabel = quality.extension.uppercase(), bitrateKbps = quality.bitrateKbps)
-            )
+            if (refreshed) throw QQMusicException(QQMusicException.Kind.NO_PLAY_URL)
+            val old = ref
+            refresh()
+            if (ref == old) throw QQMusicException(QQMusicException.Kind.NO_PLAY_URL)
         }
         throw QQMusicException(QQMusicException.Kind.NO_PLAY_URL)
     }

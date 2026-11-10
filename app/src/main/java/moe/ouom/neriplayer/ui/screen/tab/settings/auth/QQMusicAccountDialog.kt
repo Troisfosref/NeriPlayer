@@ -21,7 +21,6 @@ import kotlinx.coroutines.launch
 import moe.ouom.neriplayer.common.R as CoreCommonR
 import moe.ouom.neriplayer.core.di.AppContainer
 import moe.ouom.neriplayer.platform.qqmusic.api.QQMusicException
-import moe.ouom.neriplayer.platform.qqmusic.api.QQMusicQuality
 import moe.ouom.neriplayer.platform.qqmusic.auth.QQMusicQrLogin
 import moe.ouom.neriplayer.platform.qqmusic.auth.QQMusicQrSession
 import moe.ouom.neriplayer.platform.qqmusic.auth.QQMusicQrStatus
@@ -40,13 +39,11 @@ internal fun QQMusicAccountDialog(onDismiss: () -> Unit) {
     var error by remember { mutableStateOf<Int?>(null) }
     var errorCode by remember { mutableStateOf<String?>(null) }
     var rawCookie by remember { mutableStateOf("") }
-    var quality by remember { mutableStateOf(QQMusicQuality.EXHIGH) }
     var creating by remember { mutableIntStateOf(0) }
 
     LaunchedEffect(Unit) {
         try {
             accounts.load()
-            quality = accounts.quality()
         } catch (cancelled: CancellationException) { throw cancelled }
         catch (_: Exception) { error = CoreCommonR.string.qq_music_storage_failed }
     }
@@ -131,23 +128,6 @@ internal fun QQMusicAccountDialog(onDismiss: () -> Unit) {
                         catch (_: Exception) { error = CoreCommonR.string.qq_music_storage_failed }
                     }
                 }, enabled = rawCookie.isNotBlank()) { Text(stringResource(CoreCommonR.string.qq_music_import_cookie)) }
-            }
-            Text(stringResource(CoreCommonR.string.qq_music_preferred_quality), style = MaterialTheme.typography.titleSmall)
-            QQMusicQuality.entries.forEach { option ->
-                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                    RadioButton(selected = quality == option, onClick = {
-                        scope.launch {
-                            try { accounts.setQuality(option); quality = option }
-                            catch (cancelled: CancellationException) { throw cancelled }
-                            catch (_: Exception) { error = CoreCommonR.string.qq_music_storage_failed }
-                        }
-                    })
-                    Text(stringResource(when (option) {
-                        QQMusicQuality.LOSSLESS -> CoreCommonR.string.quality_lossless
-                        QQMusicQuality.EXHIGH -> CoreCommonR.string.quality_very_high
-                        QQMusicQuality.STANDARD -> CoreCommonR.string.quality_standard
-                    }))
-                }
             }
             error?.let { Text(stringResource(it) + errorCode?.let { code -> " ($code)" }.orEmpty(), color = MaterialTheme.colorScheme.error) }
             TextButton(onClick = onDismiss) { Text(stringResource(CoreCommonR.string.action_close)) }

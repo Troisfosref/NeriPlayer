@@ -279,7 +279,8 @@ internal fun NeteasePlaylistRow(
     cardShape: Shape,
     context: Context,
     onClick: () -> Unit,
-    offlineMode: Boolean
+    offlineMode: Boolean,
+    supportingText: String? = null
 ) {
     Card(
         shape = cardShape,
@@ -294,7 +295,7 @@ internal fun NeteasePlaylistRow(
             headlineContent = { Text(playlist.name) },
             supportingContent = {
                 Text(
-                    text = stringResource(
+                    text = supportingText ?: stringResource(
                         CoreCommonR.string.home_play_count_format,
                         formatPlayCount(context, playlist.playCount),
                         playlist.trackCount

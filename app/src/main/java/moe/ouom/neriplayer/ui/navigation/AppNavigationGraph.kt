@@ -100,6 +100,17 @@ internal class AppNavigationGraphOwner(
     val mediaActions: AppNavigationMediaActions
 ) {
     fun NavGraphBuilder.registerRoutes() {
+        composable("qq_playlist_detail/{playlistJson}", arguments = listOf(navArgument("playlistJson") { type = NavType.StringType }),
+            enterTransition = { transparentDetailEnterTransition(presentation.coherentFeedbackEnabled) },
+            exitTransition = { transparentDetailExitTransition(presentation.coherentFeedbackEnabled) },
+            popEnterTransition = { transparentDetailPopEnterTransition(presentation.coherentFeedbackEnabled) },
+            popExitTransition = { transparentDetailPopExitTransition(presentation.coherentFeedbackEnabled) }) { entry ->
+            val playlist = navigationGson.fromJson(entry.arguments?.getString("playlistJson"), moe.ouom.neriplayer.platform.qqmusic.QQMusicPlaylist::class.java)
+            presentation.renderScene("qq_playlist_detail/{playlistJson}") {
+                moe.ouom.neriplayer.ui.screen.qqmusic.QQMusicPlaylistScreen(playlist, { navController.popBackStack() },
+                    { songs, index -> mediaActions.playSongs(songs, index, moe.ouom.neriplayer.ui.screen.qqmusic.qqPlaylistRoute(playlist)) })
+            }
+        }
         registerDiscoveryAndMediaRoutes(
             navController, presentation, mediaActions, mediaActions.onSongClick
         )

@@ -212,6 +212,7 @@ internal fun SettingsPersonalizationHomeCard(
             )
         }
 
+        moe.ouom.neriplayer.ui.screen.qqmusic.QQHomeVisibilitySetting(highlightTargetId,highlightPulse,onHighlightFinished)
         LazyAnimatedVisibility(visible = !homeStartAvailable) {
             Text(
                 text = stringResource(CoreCommonR.string.settings_home_hidden_notice),
@@ -893,7 +894,7 @@ private fun LyricFontScaleSettingsItem(
 }
 
 @Composable
-private fun SettingsHomeCardSwitch(
+internal fun SettingsHomeCardSwitch(
     title: String,
     icon: ImageVector,
     checked: Boolean,

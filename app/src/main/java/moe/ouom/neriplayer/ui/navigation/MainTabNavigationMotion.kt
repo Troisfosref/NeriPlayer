@@ -29,6 +29,7 @@ private val TRANSPARENT_MAIN_TAB_DETAIL_ROUTES = setOf(
     Destinations.NeteaseAlbumDetail.route,
     Destinations.NeteaseArtistDetail.route,
     Destinations.BiliPlaylistDetail.route,
+    "qq_playlist_detail/{playlistJson}",
     Destinations.BiliUploaderDetail.route,
     Destinations.YouTubeMusicCreatorDetail.route,
     Destinations.YouTubeMusicPlaylistDetail.route,

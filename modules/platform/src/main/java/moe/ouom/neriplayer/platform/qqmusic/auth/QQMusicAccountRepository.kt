@@ -18,6 +18,8 @@ data class QQMusicAccountState(val signedIn: Boolean = false, val savedAt: Long 
 
 /** Auth is separate from playlists/backups. Fail closed if encrypted storage cannot be opened. */
 class QQMusicAccountRepository(context: Context) {
+    private val mutableQuality = MutableStateFlow(QQMusicQuality.EXHIGH)
+    val qualityState = mutableQuality.asStateFlow()
     @Volatile var preferredQuality: QQMusicQuality = QQMusicQuality.EXHIGH
         private set
     private val app = context.applicationContext
@@ -33,6 +35,7 @@ class QQMusicAccountRepository(context: Context) {
     suspend fun load() = withContext(Dispatchers.IO) {
         synchronized(this@QQMusicAccountRepository) {
             preferredQuality = readQuality()
+            mutableQuality.value = preferredQuality
             mutableState.value = QQMusicAccountState(valid(preferences.getString("cookie", "").orEmpty()),
                 preferences.getLong("savedAt", 0L))
         }
@@ -61,12 +64,13 @@ class QQMusicAccountRepository(context: Context) {
     }
 
     suspend fun quality(): QQMusicQuality = withContext(Dispatchers.IO) {
-        readQuality().also { preferredQuality = it }
+        readQuality().also { preferredQuality = it; mutableQuality.value = it }
     }
 
     suspend fun setQuality(quality: QQMusicQuality) = withContext(Dispatchers.IO) {
         check(preferences.edit().putString("quality", quality.name).commit())
         preferredQuality = quality
+        mutableQuality.value = quality
     }
 
     private fun readQuality(): QQMusicQuality = runCatching {

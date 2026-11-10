@@ -133,6 +133,7 @@ internal fun FavoritePlaylistList(
     val context = LocalContext.current
     val favoriteRepo = remember(context) { FavoritePlaylistRepository.getInstance(context) }
     val favorites by favoriteRepo.favorites.collectAsStateWithLifecycle()
+    val openQQ = moe.ouom.neriplayer.ui.screen.qqmusic.LocalQQPlaylistOpen.current
     val miniPlayerHeight = LocalMiniPlayerHeight.current
     val scope = rememberCoroutineScope()
     val importState by importViewModel.uiState.collectAsStateWithLifecycle()
@@ -517,6 +518,9 @@ internal fun FavoritePlaylistList(
                                         return@combinedClickable
                                     }
                                     when (favorite.source) {
+                                        "qqmusic" -> openQQ(moe.ouom.neriplayer.platform.qqmusic.QQMusicPlaylist(
+                                            if(favorite.id == -201L) "favorites" else if(favorite.id < 0) "dir:${-favorite.id}" else favorite.id.toString(),
+                                            favorite.name,favorite.coverUrl,favorite.trackCount,if(favorite.id<0)(-favorite.id).toInt() else null))
                                         "netease" -> {
                                             onNeteasePlaylistClick(
                                                 PlaylistSummary(

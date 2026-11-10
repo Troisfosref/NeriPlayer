@@ -13,4 +13,7 @@
   <string name="qq_browse_count">%1$d 首</string>
   <string name="qq_browse_back">返回</string>
   <string name="qq_browse_play_all">播放全部</string>
+  <string name="qq_home_visibility">QQ 音乐推荐</string>
+  <string name="qq_home_visibility_desc">显示每日推荐、猜你喜欢和推荐歌单；关闭后停止加载这些栏目</string>
+  <string name="qq_quality_default">QQ 音乐默认音质</string>
 </resources>

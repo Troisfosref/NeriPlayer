@@ -13,4 +13,7 @@
   <string name="qq_browse_count">%1$d songs</string>
   <string name="qq_browse_back">Back</string>
   <string name="qq_browse_play_all">Play all</string>
+  <string name="qq_home_visibility">QQ Music recommendations</string>
+  <string name="qq_home_visibility_desc">Show daily recommendations, For you and QQ playlists; stop fetching them when disabled</string>
+  <string name="qq_quality_default">QQ Music default quality</string>
 </resources>

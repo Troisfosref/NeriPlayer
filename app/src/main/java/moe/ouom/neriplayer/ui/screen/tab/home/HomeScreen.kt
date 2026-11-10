@@ -580,7 +580,9 @@ fun HomeScreen(
 
                     if (showOnlineFeeds) {
                         item(key = registerGridItemKey("qq_music_home"), span = { GridItemSpan(maxLineSpan) }) {
-                            moe.ouom.neriplayer.ui.screen.qqmusic.QQMusicHomeContent(refreshKey = qqRefreshKey)
+                            moe.ouom.neriplayer.ui.screen.qqmusic.QQMusicHomeContent(refreshKey = qqRefreshKey,
+                                favoriteSongLookup = favoriteSongLookup, onFavoriteToggle = ::toggleHomeSongFavorite,
+                                onShowSnackbar = showHomeSnackbar, favoriteKeys = favoriteKeys)
                         }
                         if (isInternational) {
                             if (showNeteaseTrending && ytmSections.guessYouLike != null) {
@@ -1101,7 +1103,7 @@ private fun SectionErrorState(detail: String) {
 }
 
 @Composable
-private fun SongRowMini(
+internal fun SongRowMini(
     index: Int,
     song: SongItem,
     onClick: () -> Unit,
@@ -1444,7 +1446,8 @@ fun PlaylistCard(
     isFavorite: Boolean,
     onClick: () -> Unit,
     onShowSnackbar: (String) -> Unit = {},
-    offlineMode: Boolean = false
+    offlineMode: Boolean = false,
+    source: String = "netease"
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -1541,7 +1544,7 @@ fun PlaylistCard(
                     showMenu = false
                     scope.launch {
                         if (isFavorite) {
-                            favoriteRepo.removeFavorite(playlist.id, "netease")
+                            favoriteRepo.removeFavorite(playlist.id, source)
                             onShowSnackbar(unfavoritedText)
                         } else {
                             favoriteRepo.addFavorite(
@@ -1549,7 +1552,7 @@ fun PlaylistCard(
                                 name = playlist.name,
                                 coverUrl = playlist.picUrl,
                                 trackCount = playlist.trackCount,
-                                source = "netease",
+                                source = source,
                                 songs = emptyList()
                             )
                             onShowSnackbar(favoriteSuccessText)
@@ -1744,7 +1747,7 @@ private fun LazyGridScope.addYouTubeMusicSongShelfSection(
 }
 
 @Composable
-private fun ResponsiveSongPagerList(
+internal fun ResponsiveSongPagerList(
     songs: List<SongItem>,
     onSongClick: (List<SongItem>, Int) -> Unit,
     favoriteSongLookup: FavoriteSongLookup,

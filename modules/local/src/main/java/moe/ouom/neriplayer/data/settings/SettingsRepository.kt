@@ -561,6 +561,8 @@ class SettingsRepository(private val context: Context) {
     val homeCardRecommendedFlow: Flow<Boolean> =
         autoSettingsRepository.homeCardRecommendedFlow
 
+    val homeCardQqMusicFlow: Flow<Boolean> = autoSettingsRepository.homeCardQqMusicFlow
+
     val homeCardBilibiliFlow: Flow<Boolean> =
         autoSettingsRepository.homeCardBilibiliFlow
 

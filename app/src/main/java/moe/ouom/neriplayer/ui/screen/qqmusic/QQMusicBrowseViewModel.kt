@@ -25,16 +25,16 @@ class QQMusicBrowseViewModel : ViewModel() {
     init {
         viewModelScope.launch {
             try { accounts.load() } catch (c: CancellationException) { throw c } catch (_: Exception) { return@launch }
-            combine(account, revision) { a, _ -> a }.collectLatest { a ->
+            combine(account, revision, AppContainer.settingsRepo.homeCardQqMusicFlow) { a, _, enabled -> a to enabled }.collectLatest { (a, enabled) ->
                 profile.value=QQLoad(); created.value=QQLoad();collected.value=QQLoad()
                 daily.value=QQLoad();radio.value=QQLoad();recommended.value=QQLoad()
                 if(a.signedIn) coroutineScope {
                     launch { load(profile) { repository.profile() } }
                     launch { load(created) { repository.created() } }
                     launch { load(collected) { repository.collected() } }
-                    launch { load(daily) { repository.daily() } }
-                    launch { load(radio) { repository.radio() } }
-                    launch { load(recommended) { repository.recommendations() } }
+                    if(enabled) launch { load(daily) { repository.daily() } }
+                    if(enabled) launch { load(radio) { repository.radio() } }
+                    if(enabled) launch { load(recommended) { repository.recommendations() } }
                 }
             }
         }

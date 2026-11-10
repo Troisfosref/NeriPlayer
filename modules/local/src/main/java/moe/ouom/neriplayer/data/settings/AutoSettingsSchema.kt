@@ -541,6 +541,14 @@ object AutoSettingsSchema {
             titleRes = CoreCommonR.string.settings_home_card_bilibili,
             descriptionRes = CoreCommonR.string.settings_home_card_bilibili_desc
         )
+        @AutoSetting(order = 80, ui = SettingUiType.Custom)
+        val homeCardQqMusic = autoSwitchSetting(
+            key = "home_card_qq_music", defaultValue = true,
+            titleRes = CoreCommonR.string.qq_home_visibility,
+            descriptionRes = CoreCommonR.string.qq_home_visibility_desc,
+            icon = AutoSettingIcon.Tune
+        )
+
     }
 
     /*

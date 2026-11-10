@@ -43,6 +43,7 @@ import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.Composable
 import moe.ouom.neriplayer.ui.i18n.UiText
 import androidx.compose.runtime.CompositionLocalProvider
@@ -259,6 +260,7 @@ internal fun SettingsScreen(
         mobileBiliValue = playbackState.mobileAudioQuality.mobileDataBiliAudioQuality
     )
 
+    val qqHomeEnabled by moe.ouom.neriplayer.core.di.AppContainer.settingsRepo.homeCardQqMusicFlow.collectAsState(initial = true)
     val homeStartPresentation = rememberSettingsHomeStartPresentation(
         resources = composeResources,
         configuredDestination = environment.defaultStartDestination,
@@ -268,7 +270,7 @@ internal fun SettingsScreen(
         showRecommended = otherState.homeCards.showHomeRecommendedCard,
         showContinue = otherState.homeCards.showHomeContinueCard,
         hasRecentUsage = environment.homeHasRecentUsage,
-        showBilibili = otherState.homeCards.showHomeBilibiliCard
+        showBilibili = otherState.homeCards.showHomeBilibiliCard || qqHomeEnabled
     )
     val homeStartAvailable = homeStartPresentation.available
     val homeCardCopy = homeStartPresentation.copy
