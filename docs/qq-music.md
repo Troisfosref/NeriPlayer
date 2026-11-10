@@ -43,6 +43,10 @@ QQ 歌曲会从一起听分享队列中排除，避免被当作网易云歌曲�
 
 ## 验证
 
+默认 Android CI 仅执行模块边界检查、QQ 音源单元测试、arm64 Release 编译和产物校验上传，
+集中在一个构建任务中。GitHub Actions 的 `neri-apk-unsigned` 包含 APK、构建信息及校验和；
+其中的 APK 需要签名后才能安装。
+
 完整 Android 环境中执行：
 
 ```bash
