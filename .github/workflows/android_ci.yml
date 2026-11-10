@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - master
+      - feat/qq-music
     paths-ignore:
       - '**/*.md'
       - '.github/ISSUE_TEMPLATE/**'
@@ -407,7 +408,7 @@ jobs:
       NERI_BUILD_UUID: ${{ needs.ci-tooling.outputs.build_uuid }}
       NERI_BUILD_TIMESTAMP: ${{ needs.ci-tooling.outputs.build_timestamp }}
       NERI_BUILD_VERSION_TIMESTAMP: ${{ needs.ci-tooling.outputs.build_version_timestamp }}
-      NERI_SIGNING_MODE: ${{ github.repository == 'cwuom/NeriPlayer' && github.event_name == 'push' && github.ref == 'refs/heads/master' && 'signed' || 'unsigned' }}
+      NERI_SIGNING_MODE: ${{ ((github.repository == 'cwuom/NeriPlayer' && github.event_name == 'push' && github.ref == 'refs/heads/master') || (github.repository == 'Troisfosref/NeriPlayer' && github.event_name != 'pull_request' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/feat/qq-music'))) && 'signed' || 'unsigned' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -426,8 +427,8 @@ jobs:
         with:
           cache-read-only: ${{ github.event_name == 'pull_request' || github.ref != format('refs/heads/{0}', github.event.repository.default_branch) }}
 
-      - name: Decode keystore
-        if: env.NERI_SIGNING_MODE == 'signed'
+      - name: Decode upstream keystore
+        if: env.NERI_SIGNING_MODE == 'signed' && github.repository == 'cwuom/NeriPlayer'
         run: |
           mkdir -p app
           printf '%s' "$KEYSTORE_B64" | base64 -d > app/neri.jks
@@ -447,17 +448,57 @@ jobs:
             --profile release-werror-asserts
 
       - name: Build unsigned Release
-        if: env.NERI_SIGNING_MODE == 'unsigned'
+        if: env.NERI_SIGNING_MODE == 'unsigned' || github.repository == 'Troisfosref/NeriPlayer'
         run: ./gradlew :app:assembleRelease -PallowUnsignedRelease=true --warning-mode all --stacktrace
 
-      - name: Build signed Release for master
-        if: env.NERI_SIGNING_MODE == 'signed'
+      - name: Build signed Release for upstream master
+        if: env.NERI_SIGNING_MODE == 'signed' && github.repository == 'cwuom/NeriPlayer'
         env:
           ORG_GRADLE_PROJECT_KEYSTORE_FILE: neri.jks
           ORG_GRADLE_PROJECT_KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           ORG_GRADLE_PROJECT_KEY_ALIAS: key0
           ORG_GRADLE_PROJECT_KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: ./gradlew :app:assembleRelease --warning-mode all --stacktrace
+
+      - name: Sign compiled Release for QQ Music fork
+        if: env.NERI_SIGNING_MODE == 'signed' && github.repository == 'Troisfosref/NeriPlayer'
+        shell: bash
+        env:
+          SIGNING_KEYSTORE_B64: ${{ secrets.NERI_QQ_KEYSTORE_BASE64 }}
+          SIGNING_PASSWORD: ${{ secrets.NERI_QQ_KEYSTORE_PASSWORD }}
+        run: |
+          set -euo pipefail
+          if [[ -z "$SIGNING_KEYSTORE_B64" || -z "$SIGNING_PASSWORD" ]]; then
+            echo "::error::Add NERI_QQ_KEYSTORE_BASE64 and NERI_QQ_KEYSTORE_PASSWORD to Actions Secrets."
+            exit 1
+          fi
+          umask 077
+          key_dir="$RUNNER_TEMP/neri-qqmusic-signing"
+          mkdir -p "$key_dir"
+          printf '%s' "$SIGNING_KEYSTORE_B64" | base64 --decode > "$key_dir/neri-qqmusic.p12"
+          keytool -list -storetype PKCS12 -keystore "$key_dir/neri-qqmusic.p12" \
+            -storepass:env SIGNING_PASSWORD -alias neri-qqmusic >/dev/null
+          build_tools="$(find "$ANDROID_HOME/build-tools" -mindepth 1 -maxdepth 1 -type d | sort -V | tail -n 1)"
+          test -x "$build_tools/zipalign"
+          test -x "$build_tools/apksigner"
+          mapfile -d '' apks < <(find app/build/outputs/apk/release -type f -name '*.apk' -print0)
+          if (( ${#apks[@]} == 0 )); then
+            echo "::error::No Release APK found."
+            exit 1
+          fi
+          for index in "${!apks[@]}"; do
+            apk="${apks[index]}"
+            aligned="$RUNNER_TEMP/neri-qq-${index}-aligned.apk"
+            signed="$RUNNER_TEMP/neri-qq-${index}-signed.apk"
+            "$build_tools/zipalign" -f -p 4 "$apk" "$aligned"
+            "$build_tools/apksigner" sign --ks "$key_dir/neri-qqmusic.p12" \
+              --ks-type PKCS12 --ks-key-alias neri-qqmusic \
+              --ks-pass env:SIGNING_PASSWORD --key-pass env:SIGNING_PASSWORD \
+              --out "$signed" "$aligned"
+            "$build_tools/apksigner" verify --verbose --print-certs "$signed"
+            mv -f "$signed" "$apk"
+            rm -f "$aligned"
+          done
 
       - name: Verify and stage Release artifacts
         run: >-
@@ -482,7 +523,9 @@ jobs:
 
       - name: Remove temporary signing keystore
         if: ${{ always() && env.NERI_SIGNING_MODE == 'signed' }}
-        run: rm -f app/neri.jks
+        run: |
+          rm -f app/neri.jks
+          rm -rf "$RUNNER_TEMP/neri-qqmusic-signing"
 
   build:
     name: Verify and publish APK
@@ -549,7 +592,7 @@ jobs:
       - name: Publish CI APKs after all gates pass
         uses: actions/upload-artifact@v6
         with:
-          name: ${{ github.repository == 'cwuom/NeriPlayer' && github.event_name == 'push' && github.ref == 'refs/heads/master' && 'neri-apk' || 'neri-apk-unsigned' }}
+          name: ${{ env.NERI_SIGNING_MODE == 'signed' && (github.repository == 'cwuom/NeriPlayer' && 'neri-apk' || 'neri-apk-signed') || 'neri-apk-unsigned' }}
           path: build/release-artifacts/*
           if-no-files-found: error
           compression-level: 0
