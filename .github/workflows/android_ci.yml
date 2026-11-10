@@ -592,7 +592,7 @@ jobs:
       - name: Publish CI APKs after all gates pass
         uses: actions/upload-artifact@v6
         with:
-          name: ${{ env.NERI_SIGNING_MODE == 'signed' && (github.repository == 'cwuom/NeriPlayer' && 'neri-apk' || 'neri-apk-signed') || 'neri-apk-unsigned' }}
+          name: ${{ github.repository == 'cwuom/NeriPlayer' && github.event_name == 'push' && github.ref == 'refs/heads/master' && 'neri-apk' || (github.repository == 'Troisfosref/NeriPlayer' && github.event_name != 'pull_request' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/feat/qq-music')) && 'neri-apk-signed' || 'neri-apk-unsigned' }}
           path: build/release-artifacts/*
           if-no-files-found: error
           compression-level: 0
