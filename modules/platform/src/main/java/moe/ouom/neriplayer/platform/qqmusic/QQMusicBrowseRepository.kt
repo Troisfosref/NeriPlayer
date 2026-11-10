@@ -35,7 +35,7 @@ class QQMusicBrowseRepository(private val accounts: QQMusicAccountRepository, pr
             val data=web("https://c.y.qq.com/rsc/fcgi-bin/fcg_user_created_diss",mapOf("hostuin" to id,"sin" to "$offset","size" to "100","format" to "json"),c).optJSONObject("data") ?: break
             val raw=data.optJSONArray("disslist") ?: data.optJSONArray("list") ?: break
             val page=raw.objects().mapNotNull(::qqBrowsePlaylist)
-            if(offset>0 && page.all { p -> result.any { it.id==p.id } }) throw QQMusicException(QQMusicException.Kind.REQUEST_FAILED)
+            if(offset>0 && raw.length()>0 && page.all { p -> result.any { it.id==p.id } }) throw QQMusicException(QQMusicException.Kind.REQUEST_FAILED)
             result += page.filter { it.directory != 201 && it.title !in listOf("我喜欢","我喜欢的音乐","Qzone背景音乐","本地上传") }
             if (raw.length()<100) break
             offset+=raw.length()
@@ -50,7 +50,7 @@ class QQMusicBrowseRepository(private val accounts: QQMusicAccountRepository, pr
                 "reqtype" to "3","sin" to "$offset","ein" to "${offset+99}","g_tk" to "5381","ct" to "20","cid" to "205360956"),c).optJSONObject("data") ?: break
             val raw=data.optJSONArray("cdlist") ?: break
             val page=raw.objects().mapNotNull(::qqBrowsePlaylist)
-            if(offset>0 && page.all { p -> result.any { it.id==p.id } }) throw QQMusicException(QQMusicException.Kind.REQUEST_FAILED)
+            if(offset>0 && raw.length()>0 && page.all { p -> result.any { it.id==p.id } }) throw QQMusicException(QQMusicException.Kind.REQUEST_FAILED)
             result+=page
             if(raw.length()<100)break
             offset+=raw.length()

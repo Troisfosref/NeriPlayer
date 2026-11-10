@@ -45,4 +45,20 @@ class QQMusicBrowseTest {
         val params=body.getJSONObject("playlist").getJSONObject("param")
         assertEquals(201,params.getInt("dirid"));assertEquals(0L,params.getLong("disstid"));assertEquals(100,params.getInt("song_begin"))
     }
+    @Test fun `exactly one hundred created playlists finish on an empty following page`() = runBlocking {
+        val accounts=Mockito.mock(QQMusicAccountRepository::class.java)
+        Mockito.`when`(accounts.cookie()).thenReturn("musicid=123; musickey=fixture")
+        val offsets=mutableListOf<String?>()
+        val http=OkHttpClient.Builder().addInterceptor { chain ->
+            val offset=chain.request().url.queryParameter("sin");offsets+=offset
+            val list=JSONArray()
+            if(offset=="0") repeat(100) { list.put(JSONObject().put("dissid",1000+it).put("diss_name","Playlist $it")) }
+            val response=JSONObject().put("code",0).put("data",JSONObject().put("disslist",list))
+            Response.Builder().request(chain.request()).protocol(Protocol.HTTP_1_1).code(200).message("OK")
+                .body(response.toString().toResponseBody()).build()
+        }.build()
+        val result=QQMusicBrowseRepository(accounts,QQMusicClient(http)).created()
+        assertEquals(100,result.size);assertEquals(listOf("0","100"),offsets)
+    }
+
 }
