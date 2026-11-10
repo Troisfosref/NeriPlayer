@@ -1,0 +1,152 @@
+name: NeriPlayer QQ Music Signed APK
+
+# Manual only: never expose the signing key to pull-request code.
+on:
+  workflow_dispatch:
+    inputs:
+      source_ref:
+        description: Source branch to build
+        required: true
+        default: feat/qq-music
+        type: choice
+        options:
+          - feat/qq-music
+          - master
+
+permissions:
+  contents: read
+
+concurrency:
+  group: neri-qq-signed-${{ inputs.source_ref }}
+  cancel-in-progress: false
+
+jobs:
+  signed-apk:
+    name: Build and verify signed APK
+    if: github.repository == 'Troisfosref/NeriPlayer'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      GRADLE_OPTS: -Dorg.gradle.caching=true
+      NERI_SIGNING_MODE: signed
+
+    steps:
+      - name: Checkout selected source
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ inputs.source_ref }}
+          fetch-depth: 0
+          submodules: recursive
+          persist-credentials: false
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Gradle cache
+        uses: gradle/actions/setup-gradle@v5
+
+      - name: Install Android NDK
+        uses: ./.github/actions/android-ndk
+
+      - name: Restore private signing key
+        env:
+          SIGNING_KEYSTORE_B64: ${{ secrets.NERI_QQ_KEYSTORE_BASE64 }}
+          SIGNING_PASSWORD: ${{ secrets.NERI_QQ_KEYSTORE_PASSWORD }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ -z "$SIGNING_KEYSTORE_B64" || -z "$SIGNING_PASSWORD" ]]; then
+            echo "::error::Add NERI_QQ_KEYSTORE_BASE64 and NERI_QQ_KEYSTORE_PASSWORD in repository Actions secrets."
+            exit 1
+          fi
+          umask 077
+          mkdir -p "$RUNNER_TEMP/neri-qqmusic-signing"
+          printf '%s' "$SIGNING_KEYSTORE_B64" | base64 --decode > "$RUNNER_TEMP/neri-qqmusic-signing/neri-qqmusic.p12"
+          test -s "$RUNNER_TEMP/neri-qqmusic-signing/neri-qqmusic.p12"
+          keytool -list -storetype PKCS12 \
+            -keystore "$RUNNER_TEMP/neri-qqmusic-signing/neri-qqmusic.p12" \
+            -storepass:env SIGNING_PASSWORD -alias neri-qqmusic >/dev/null
+          echo "Signing key validated."
+
+      - name: Prepare build identity
+        shell: python
+        run: |
+          import os
+          from pathlib import Path
+          import subprocess
+
+          output = subprocess.check_output(
+              ["python3", ".github/scripts/release_artifacts.py", "prepare"], text=True
+          )
+          values = dict(line.split("=", 1) for line in output.splitlines())
+          properties = {
+              "buildUuid": "build_uuid",
+              "buildTimestamp": "build_timestamp",
+              "buildVersionTimestamp": "build_version_timestamp",
+          }
+          with Path(os.environ["GITHUB_ENV"]).open("a", encoding="utf-8") as stream:
+              for property_name, key in properties.items():
+                  stream.write(f"ORG_GRADLE_PROJECT_{property_name}={values[key]}\n")
+              for key, value in values.items():
+                  stream.write(f"NERI_{key.upper()}={value}\n")
+
+      - name: Check module boundaries
+        run: python3 -B tools_pub/quality/module_boundaries.py
+
+      - name: Run QQ Music tests and build signed Release
+        env:
+          ORG_GRADLE_PROJECT_KEYSTORE_FILE: ${{ runner.temp }}/neri-qqmusic-signing/neri-qqmusic.p12
+          ORG_GRADLE_PROJECT_KEYSTORE_PASSWORD: ${{ secrets.NERI_QQ_KEYSTORE_PASSWORD }}
+          ORG_GRADLE_PROJECT_KEY_ALIAS: neri-qqmusic
+          ORG_GRADLE_PROJECT_KEY_PASSWORD: ${{ secrets.NERI_QQ_KEYSTORE_PASSWORD }}
+        run: |
+          set -euo pipefail
+          chmod +x gradlew
+          ./gradlew :platform:testDebugUnitTest --tests 'moe.ouom.neriplayer.platform.qqmusic.*' \
+            :app:assembleRelease --warning-mode all --stacktrace
+
+      - name: Verify Android APK signing and package build
+        shell: bash
+        run: |
+          set -euo pipefail
+          mapfile -d '' apks < <(find app/build/outputs/apk/release -type f -name '*.apk' -print0)
+          if (( ${#apks[@]} == 0 )); then
+            echo "::error::No release APK was produced."
+            exit 1
+          fi
+          build_tools=$(find "$ANDROID_HOME/build-tools" -mindepth 1 -maxdepth 1 -type d | sort -V | tail -n 1)
+          for apk in "${apks[@]}"; do
+            "$build_tools/apksigner" verify --verbose --print-certs "$apk"
+          done
+          python3 -B .github/scripts/release_artifacts.py stage \
+            --apk-dir app/build/outputs/apk/release --output-dir build/release-artifacts
+          (cd build/release-artifacts && sha256sum --check --strict SHA256SUMS.txt)
+          python3 -B .github/scripts/release_artifacts.py summary \
+            --metadata-file build/release-artifacts/build-metadata.json --status published \
+            --expected-sha "$(git rev-parse HEAD)" --expected-build-uuid "$NERI_BUILD_UUID"
+
+      - name: Upload signed APK
+        uses: actions/upload-artifact@v6
+        with:
+          name: neri-qqmusic-signed-apk
+          path: build/release-artifacts/*
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 14
+
+      - name: Remove transient signing key
+        if: always()
+        run: rm -rf "$RUNNER_TEMP/neri-qqmusic-signing"
+
+      - name: Upload QQ Music test reports
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: qq-music-signed-build-test-reports
+          path: |
+            modules/platform/build/test-results/testDebugUnitTest/**
+            modules/platform/build/reports/tests/testDebugUnitTest/**
+          if-no-files-found: ignore
