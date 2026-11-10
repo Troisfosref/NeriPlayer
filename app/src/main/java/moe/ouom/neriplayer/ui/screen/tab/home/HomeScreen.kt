@@ -579,7 +579,7 @@ fun HomeScreen(
                     }
 
                     if (showOnlineFeeds) {
-                        item(key = "qq_music_home", span = { GridItemSpan(maxLineSpan) }) {
+                        item(key = registerGridItemKey("qq_music_home"), span = { GridItemSpan(maxLineSpan) }) {
                             moe.ouom.neriplayer.ui.screen.qqmusic.QQMusicHomeContent(refreshKey = qqRefreshKey)
                         }
                         if (isInternational) {
