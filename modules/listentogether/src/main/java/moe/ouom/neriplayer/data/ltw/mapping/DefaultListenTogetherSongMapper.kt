@@ -1,7 +1,5 @@
 package moe.ouom.neriplayer.data.ltw.mapping
 
-import moe.ouom.neriplayer.data.model.qqmusic.isQQMusicSong
-
 import moe.ouom.neriplayer.data.model.server.isServerSong
 
 import android.net.Uri
@@ -73,7 +71,9 @@ class DefaultListenTogetherSongMapper(
     }
 
     override fun SongItem.toListenTogetherTrackOrNull(includeLocal: Boolean): ListenTogetherTrack? {
-        if (isServerSong() || isQQMusicSong()) return null
+        // QQ is not part of the room protocol yet; keep platform-specific models outside this module.
+        if (isServerSong() || channelId.equals("qqmusic", ignoreCase = true) ||
+            mediaUri?.startsWith("qqmusic://") == true) return null
         val channel = resolvedChannelId()
         if (channel.equals(ListenTogetherChannels.LOCAL, ignoreCase = true) && !includeLocal) {
             return null
