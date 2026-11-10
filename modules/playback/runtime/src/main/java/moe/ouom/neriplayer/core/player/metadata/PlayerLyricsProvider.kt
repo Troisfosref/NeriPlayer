@@ -1107,7 +1107,7 @@ object PlayerLyricsProvider {
                 val cachedAmll = amllLyricsCache.get(buildAmllLyricsCacheKey(song, requireDurationMatch = false))
                 cachedAmll?.romanizedLyrics?.takeIf { it.isNotEmpty() }?.let { return@withContext it }
             }
-            if (song.isQQMusicSong()) emptyList() else
+            if (song.isQQMusicSong()) loadQQMusicLyrics(song, preferWordTimed = preferWordTimedLyrics, romanized = true) else
                 loadNeteaseRomanizedFallback(song, preferWordTimedLyrics, editableLyricsMatcher, neteaseClient, neteaseLyricsCache)
         }
     }
@@ -1227,7 +1227,7 @@ object PlayerLyricsProvider {
                     return@withContext entries
                 }
             }
-            if (song.isQQMusicSong()) return@withContext loadQQMusicLyrics(song)
+            if (song.isQQMusicSong()) return@withContext loadQQMusicLyrics(song, preferWordTimed = preferWordTimedLyrics)
             if (song.isServerSong()) {
                 // Server failures must reach the existing lyric load owner, not look like no lyrics.
                 return@withContext PlayerDependencies.repositories.subsonicRepository?.lyrics(song).orEmpty()

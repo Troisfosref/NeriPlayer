@@ -101,7 +101,8 @@ fun estimateBitrateKbps(
 data class PreferredQualityKeys(
     val netease: String = "exhigh",
     val youtube: String = "high",
-    val bili: String = "high"
+    val bili: String = "high",
+    val qqMusic: String = "exhigh"
 )
 
 fun PreferredQualityKeys.forSource(source: PlaybackAudioSource): String? {
@@ -109,6 +110,7 @@ fun PreferredQualityKeys.forSource(source: PlaybackAudioSource): String? {
         PlaybackAudioSource.NETEASE -> netease
         PlaybackAudioSource.YOUTUBE_MUSIC -> youtube
         PlaybackAudioSource.BILIBILI -> bili
-        PlaybackAudioSource.LOCAL, PlaybackAudioSource.SUBSONIC, PlaybackAudioSource.QQ_MUSIC -> null
+        PlaybackAudioSource.QQ_MUSIC -> qqMusic
+        PlaybackAudioSource.LOCAL, PlaybackAudioSource.SUBSONIC -> null
     }
 }

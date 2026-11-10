@@ -21,6 +21,17 @@ import org.junit.Test
 class PlaybackPreferenceSnapshotTest {
 
     @Test
+    fun `QQ mobile quality is independent and normalized in playback snapshots`() {
+        val prefs=preferencesOf(SettingsKeys.MOBILE_DATA_QQ_MUSIC_AUDIO_QUALITY to " LOSSLESS ",
+            SettingsKeys.MOBILE_DATA_BILI_AUDIO_QUALITY to "low")
+        val snapshot=prefs.toPlaybackPreferenceSnapshot()
+        assertEquals("lossless",snapshot.mobileDataQQMusicAudioQuality)
+        assertEquals("low",snapshot.mobileDataBiliAudioQuality)
+        assertEquals("standard",preferencesOf().toPlaybackPreferenceSnapshot().mobileDataQQMusicAudioQuality)
+        assertEquals("standard",normalizeMobileDataQQMusicAudioQuality("invalid"))
+    }
+
+    @Test
     fun `preferences restore high resolution output setting`() {
         val snapshot = preferencesOf(
             SettingsKeys.PLAYBACK_HIGH_RESOLUTION_OUTPUT_ENABLED to true,

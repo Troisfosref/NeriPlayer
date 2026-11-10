@@ -23,20 +23,36 @@ class QQMusicBrowseViewModel : ViewModel() {
     val radio = MutableStateFlow(QQLoad<List<SongItem>>())
     val recommended = MutableStateFlow(QQLoad<List<QQMusicPlaylist>>())
     private val revision = MutableStateFlow(0)
+    private val libraryRequested = MutableStateFlow(false)
+    private val homeRequested = MutableStateFlow(false)
+    fun requestLibrary() { libraryRequested.value = true }
+    fun requestHome() { homeRequested.value = true }
     init {
         viewModelScope.launch {
             try { accounts.load() } catch (c: CancellationException) { throw c } catch (_: Exception) { return@launch }
-            combine(account, revision, AppContainer.settingsRepo.homeCardQqMusicFlow) { a, _, enabled -> a to enabled }.collectLatest { (a, enabled) ->
-                profile.value=QQLoad();liked.value=QQLoad();created.value=QQLoad();collected.value=QQLoad()
-                daily.value=QQLoad();radio.value=QQLoad();recommended.value=QQLoad()
-                if(a.signedIn) coroutineScope {
-                    launch { load(profile) { repository.profile() } }
-                    launch { load(liked) { repository.liked() } }
-                    launch { load(created) { repository.created() } }
-                    launch { load(collected) { repository.collected() } }
-                    if(enabled) launch { load(daily) { repository.daily() } }
-                    if(enabled) launch { load(radio) { repository.radio() } }
-                    if(enabled) launch { load(recommended) { repository.recommendations() } }
+            launch {
+                combine(account, revision, libraryRequested, accounts.libraryRevision) { a, _, requested, _ ->
+                    a.takeIf { requested }
+                }.collectLatest { a ->
+                    profile.value=QQLoad();liked.value=QQLoad();created.value=QQLoad();collected.value=QQLoad()
+                    if(a?.signedIn == true) coroutineScope {
+                        launch { load(profile) { repository.profile() } }
+                        launch { load(liked) { repository.liked() } }
+                        launch { load(created) { repository.created() } }
+                        launch { load(collected) { repository.collected() } }
+                    }
+                }
+            }
+            launch {
+                combine(account, revision, homeRequested, AppContainer.settingsRepo.homeCardQqMusicFlow) { a, _, requested, enabled ->
+                    a.takeIf { requested && enabled }
+                }.collectLatest { a ->
+                    daily.value=QQLoad();radio.value=QQLoad();recommended.value=QQLoad()
+                    if(a?.signedIn == true) coroutineScope {
+                        launch { load(daily) { repository.daily() } }
+                        launch { load(radio) { repository.radio() } }
+                        launch { load(recommended) { repository.recommendations() } }
+                    }
                 }
             }
         }

@@ -47,7 +47,11 @@ jobs:
     name: Basic checks and APK
     runs-on: ubuntu-latest
     timeout-minutes: 45
-    if: ${{ github.event_name != 'push' || !startsWith(github.event.head_commit.message, '[skip ci]') }}
+    # The trusted feature push already builds and signs the same revision.
+    if: >-
+      ${{ (github.event_name != 'push' || !startsWith(github.event.head_commit.message, '[skip ci]')) &&
+          !(github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository &&
+            github.event.pull_request.head.ref == 'feat/qq-music') }}
     env:
       # Never expose signing secrets to PR code, especially external forks.
       NERI_SIGNING_MODE: ${{ github.repository == 'Troisfosref/NeriPlayer' && github.event_name != 'pull_request' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/feat/qq-music') && 'signed' || 'unsigned' }}
@@ -101,6 +105,11 @@ jobs:
         run: |
           chmod +x gradlew
           ./gradlew :platform:testDebugUnitTest --tests 'moe.ouom.neriplayer.platform.qqmusic.*' \
+            --tests 'moe.ouom.neriplayer.platform.search.api.codec.QQMusic*' \
+            --tests 'moe.ouom.neriplayer.platform.search.api.client.QQMusicSearchApiTest' \
+            --tests 'moe.ouom.neriplayer.platform.lyrics.repository.QQMusicLyricsRepositoryTest' \
+            :lyrics:testDebugUnitTest --tests '*parser*' \
+            :playback:logic:testDebugUnitTest --tests '*PlaybackQualityOwnerTest' \
             :app:assembleRelease -PallowUnsignedRelease=true --warning-mode all --stacktrace
 
       - name: Sign compiled APK (trusted branch only)
@@ -174,4 +183,6 @@ jobs:
           path: |
             modules/platform/build/test-results/testDebugUnitTest/**
             modules/platform/build/reports/tests/testDebugUnitTest/**
+            modules/lyrics/build/test-results/testDebugUnitTest/**
+            modules/playback/logic/build/test-results/testDebugUnitTest/**
           if-no-files-found: ignore

@@ -16,4 +16,9 @@
   <string name="qq_home_visibility">QQ Music recommendations</string>
   <string name="qq_home_visibility_desc">Show daily recommendations, For you and QQ playlists; stop fetching them when disabled</string>
   <string name="qq_quality_default">QQ Music default quality</string>
+  <string name="qq_quality_mobile">QQ Music mobile data quality</string>
+  <string name="qq_action_failed">Action failed. Please try again.</string>
+  <string name="qq_add_liked">Add to QQ Music likes</string>
+  <string name="qq_add_liked_success">Added to QQ Music likes</string>
+  <string name="qq_quality_download">QQ Music download quality</string>
 </resources>

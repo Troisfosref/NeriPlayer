@@ -45,8 +45,10 @@ internal object AudioDownloadSourceResolver {
 
     internal fun isBiliSource(song: SongItem): Boolean = song.identity().album == "bilibili"
 
-    internal suspend fun resolveQQMusic(song: SongItem): AudioDownloadManager.ResolvedDownloadSource {
-        val source = DownloadHosts.sources.qqMusicRepository?.playback(song)
+    internal suspend fun resolveQQMusic(song: SongItem, preferredQuality: String? = null): AudioDownloadManager.ResolvedDownloadSource {
+        val source = DownloadHosts.sources.qqMusicRepository?.playback(song, preferredQuality?.let {
+            moe.ouom.neriplayer.platform.qqmusic.api.QQMusicQuality.valueOf(it.uppercase())
+        })
             ?: throw java.io.IOException("QQ Music source is unavailable")
         return AudioDownloadManager.ResolvedDownloadSource(url = source.url, mimeType = source.mimeType,
             durationMs = source.durationMs,

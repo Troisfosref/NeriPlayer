@@ -430,6 +430,13 @@ object AutoSettingsSchema {
             iconRes = CoreCommonR.drawable.ic_bilibili
         )
 
+        @AutoSetting(key = "mobile_data_qq_music_audio_quality", type = SettingValueType.String,
+            defaultString = "standard", order = 75, ui = SettingUiType.Custom,
+            access = SettingAccessMode.KeyOnly)
+        val mobileDataQQMusicAudioQuality = autoSetting(
+            titleRes = CoreCommonR.string.qq_quality_mobile
+        )
+
         @AutoSetting(
             key = "mobile_data_downgrade_quality",
             type = SettingValueType.String,
@@ -1663,6 +1670,12 @@ object AutoSettingsSchema {
             defaultValue = DEFAULT_DOWNLOAD_BILI_AUDIO_QUALITY,
             titleRes = CoreCommonR.string.settings_download_bili_audio_quality,
             iconRes = CoreCommonR.drawable.ic_bilibili
+        )
+
+        @AutoSetting(order = 45, ui = SettingUiType.Custom)
+        val downloadQQMusicAudioQuality = autoStringSetting(
+            key = "download_qq_music_audio_quality", defaultValue = "exhigh",
+            titleRes = CoreCommonR.string.qq_quality_download
         )
 
         @AutoSetting(order = 50)

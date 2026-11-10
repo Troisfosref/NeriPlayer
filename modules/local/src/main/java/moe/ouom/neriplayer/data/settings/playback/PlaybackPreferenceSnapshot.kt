@@ -102,6 +102,7 @@ private const val PLAYBACK_MOBILE_DATA_YOUTUBE_AUDIO_QUALITY_KEY =
     "mobile_data_youtube_audio_quality"
 private const val PLAYBACK_MOBILE_DATA_BILI_AUDIO_QUALITY_KEY =
     "mobile_data_bili_audio_quality"
+private const val PLAYBACK_MOBILE_DATA_QQ_MUSIC_AUDIO_QUALITY_KEY = "mobile_data_qq_music_audio_quality"
 private const val PLAYBACK_KEEP_PROGRESS_KEY = "keep_last_playback_progress"
 private const val PLAYBACK_REMEMBER_LONG_FORM_PROGRESS_KEY =
     "remember_long_form_playback_progress"
@@ -252,6 +253,7 @@ private fun persistNormalizedPlaybackPreferenceSnapshot(
                     PLAYBACK_MOBILE_DATA_BILI_AUDIO_QUALITY_KEY,
                     normalizedSnapshot.mobileDataBiliAudioQuality
                 )
+                .putString(PLAYBACK_MOBILE_DATA_QQ_MUSIC_AUDIO_QUALITY_KEY, normalizedSnapshot.mobileDataQQMusicAudioQuality)
                 .putBoolean(PLAYBACK_KEEP_PROGRESS_KEY, normalizedSnapshot.keepLastPlaybackProgress)
                 .putBoolean(
                     PLAYBACK_REMEMBER_LONG_FORM_PROGRESS_KEY,
@@ -401,6 +403,9 @@ fun Preferences.toPlaybackPreferenceSnapshot(): PlaybackPreferenceSnapshot {
                 resolveLegacyMobileDataBiliAudioQuality(legacyMobileDataQuality)
             )
         ),
+        mobileDataQQMusicAudioQuality = normalizeMobileDataQQMusicAudioQuality(
+            valueOr(SettingsKeys.MOBILE_DATA_QQ_MUSIC_AUDIO_QUALITY, "standard")
+        ),
         keepLastPlaybackProgress = valueOr(SettingsKeys.KEEP_LAST_PLAYBACK_PROGRESS, true),
         rememberLongFormPlaybackProgress = valueOr(SettingsKeys.REMEMBER_LONG_FORM_PLAYBACK_PROGRESS, true),
         keepPlaybackModeState = valueOr(SettingsKeys.KEEP_PLAYBACK_MODE_STATE, true),
@@ -522,6 +527,9 @@ private fun SharedPreferences.toCachedPlaybackPreferenceSnapshot(): PlaybackPref
                 DEFAULT_MOBILE_DATA_BILI_AUDIO_QUALITY,
                 resolveLegacyMobileDataBiliAudioQuality(legacyMobileDataQuality)
             )
+        ),
+        mobileDataQQMusicAudioQuality = normalizeMobileDataQQMusicAudioQuality(
+            prefs.getString(PLAYBACK_MOBILE_DATA_QQ_MUSIC_AUDIO_QUALITY_KEY, "standard")
         ),
         keepLastPlaybackProgress = prefs.getBoolean(PLAYBACK_KEEP_PROGRESS_KEY, true),
         rememberLongFormPlaybackProgress = prefs.getBoolean(
@@ -660,6 +668,7 @@ fun PlaybackPreferenceSnapshot.sanitized(): PlaybackPreferenceSnapshot {
             normalizeMobileDataYouTubeAudioQuality(mobileDataYouTubeAudioQuality),
         mobileDataBiliAudioQuality =
             normalizeMobileDataBiliAudioQuality(mobileDataBiliAudioQuality),
+        mobileDataQQMusicAudioQuality = normalizeMobileDataQQMusicAudioQuality(mobileDataQQMusicAudioQuality),
         playbackFadeInDurationMs = playbackFadeInDurationMs.coerceAtLeast(0L),
         playbackFadeOutDurationMs = playbackFadeOutDurationMs.coerceAtLeast(0L),
         playbackCrossfadeInDurationMs = playbackCrossfadeInDurationMs.coerceAtLeast(0L),

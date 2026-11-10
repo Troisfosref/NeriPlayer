@@ -38,6 +38,7 @@ internal fun QQMusicPlaylist.summary() = PlaylistSummary(id.toLongOrNull() ?: -(
 
 @Composable
 fun QQMusicLibraryContent(listState: LazyListState, vm: QQMusicBrowseViewModel = viewModel()) {
+    LaunchedEffect(vm) { vm.requestLibrary() }
     val account by vm.account.collectAsStateWithLifecycle()
     val profile by vm.profile.collectAsStateWithLifecycle()
     val liked by vm.liked.collectAsStateWithLifecycle()
@@ -81,6 +82,7 @@ fun QQMusicLibraryContent(listState: LazyListState, vm: QQMusicBrowseViewModel =
 @Composable
 internal fun QQMusicHomeContent(refreshKey: Int, favoriteSongLookup: FavoriteSongLookup,
     onFavoriteToggle: (SongItem,Boolean)->Unit,onShowSnackbar:(String)->Unit,favoriteKeys:Set<String> = emptySet(),vm:QQMusicBrowseViewModel=viewModel()) {
+    LaunchedEffect(vm) { vm.requestHome() }
     val account by vm.account.collectAsStateWithLifecycle()
     val enabled by AppContainer.settingsRepo.homeCardQqMusicFlow.collectAsState(initial=true)
     val daily by vm.daily.collectAsStateWithLifecycle()
@@ -96,7 +98,7 @@ internal fun QQMusicHomeContent(refreshKey: Int, favoriteSongLookup: FavoriteSon
             QQLoadNotice(state.loading,state.failed,state.data?.isEmpty()==true,vm::refresh)
             if(!state.data.isNullOrEmpty()) {
                 ResponsiveSongPagerList(state.data.orEmpty(),{songs,index->PlayerManager.playPlaylist(songs,index)},favoriteSongLookup,onFavoriteToggle,onShowSnackbar,false)
-                TextButton(onClick={open(QQMusicPlaylist(id,title,state.data?.firstOrNull()?.coverUrl,state.data?.size ?: 0))}){Text(stringResource(CoreR.string.qq_browse_more))}
+                TextButton(onClick={open(QQMusicPlaylist(id,title,state.data.firstOrNull()?.coverUrl,state.data.size))}){Text(stringResource(CoreR.string.qq_browse_more))}
             }
         }
         SectionHeader(Icons.Outlined.Star,stringResource(CoreR.string.qq_browse_recommended))

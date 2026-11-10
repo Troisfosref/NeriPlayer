@@ -386,7 +386,7 @@ internal suspend fun AudioDownloadManager.resolveDownloadSourceForAttempt(
 ): ResolvedDownloadSource? {
     return sourceResolveSemaphore.withPermit {
         when {
-            song.isQQMusicSong() -> AudioDownloadSourceResolver.resolveQQMusic(song)
+            song.isQQMusicSong() -> AudioDownloadSourceResolver.resolveQQMusic(song, downloadAudioQuality.qqMusicQuality)
             song.isServerSong() -> AudioDownloadSourceResolver.resolveServer(song)
             isYouTubeMusic -> resolveYouTubeMusic(
                 song = song,

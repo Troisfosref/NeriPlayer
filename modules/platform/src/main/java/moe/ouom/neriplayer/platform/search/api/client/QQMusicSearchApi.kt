@@ -28,6 +28,8 @@ import java.io.IOException
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.serialization.json.Json
 import moe.ouom.neriplayer.platform.search.api.NativeLyricSearchApi
 import moe.ouom.neriplayer.platform.search.api.codec.decodeQQMusicLyricPayload
@@ -155,7 +157,28 @@ class QQMusicSearchApi(
         NPLogger.d(TAG, "获取歌曲详情响应: labelHash=${label.hashCode()}, length=${responseJson.length}")
     }
 
-    suspend fun getNativeLyrics(songMid: String): Pair<String?, String?> {
+    private val nativeLyricMutex = Mutex()
+    private val nativeLyrics = object : LinkedHashMap<String, Pair<Long, Triple<String?, String?, String?>>>(32, .75f, true) {
+        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, Pair<Long, Triple<String?, String?, String?>>>?) = size > 32
+    }
+
+    suspend fun getNativeLyrics(songMid: String): Pair<String?, String?> = nativeLyricBundle(songMid).let {
+        it.first to it.second
+    }
+
+    suspend fun getNativeRomanizedLyrics(songMid: String): String? = nativeLyricBundle(songMid).third
+
+    private suspend fun nativeLyricBundle(songMid: String): Triple<String?, String?, String?> = nativeLyricMutex.withLock {
+        val now = System.nanoTime()
+        nativeLyrics[songMid]?.takeIf { now - it.first < 300_000_000_000L }?.let { return@withLock it.second }
+        val wordLyrics = requestNativeLyrics(songMid, wordTimed = true)
+        val resolved = if (!wordLyrics.first.isNullOrBlank()) wordLyrics
+            else requestNativeLyrics(songMid, wordTimed = false)
+        if (!resolved.first.isNullOrBlank()) nativeLyrics[songMid] = now to resolved
+        resolved
+    }
+
+    private suspend fun requestNativeLyrics(songMid: String, wordTimed: Boolean): Triple<String?, String?, String?> {
         return try {
             val lyricRequestData = JSONObject().put(
                 "req", JSONObject()
@@ -166,7 +189,8 @@ class QQMusicSearchApi(
                             .put("songMID", songMid)
                             // 不显式点名要翻译, 接口只回一个空的 trans
                             .put("trans", 1)
-                            .put("qrc", 0)
+                            .put("qrc", if(wordTimed) 1 else 0)
+                            .put("roma", 1)
                             .put("crypt", 0)
                     )
             ).toString()
@@ -189,7 +213,7 @@ class QQMusicSearchApi(
                         "QQ lyric request rejected: songMid=$songMid code=${envelope.code}"
                     )
                 }
-                Pair(null, null)
+                Triple(null, null, null)
             } else {
                 val lyricResponse = envelope.data
 
@@ -199,13 +223,13 @@ class QQMusicSearchApi(
                     decodeQQMusicLyricPayload(lyricResponse?.trans)
                 )
 
-                Pair(lyric, translatedLyric)
+                Triple(lyric, translatedLyric, decodeQQMusicLyricPayload(lyricResponse?.roma))
             }
         } catch (error: CancellationException) {
             throw error
         } catch (error: Exception) {
             NPLogger.e(TAG, "获取QQ音乐歌词失败", error)
-            Pair(null, null)
+            Triple(null, null, null)
         }
     }
 

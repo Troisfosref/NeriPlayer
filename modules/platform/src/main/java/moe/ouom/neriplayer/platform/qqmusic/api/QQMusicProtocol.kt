@@ -60,9 +60,8 @@ enum class QQMusicQuality(val prefix: String, val extension: String, val bitrate
 }
 
 internal fun qqFilenames(prefix: String, extension: String, mid: String, mediaMid: String): List<String> =
-    if (mediaMid.isNotBlank()) listOf("$prefix$mediaMid.$extension",
-        "$prefix$mediaMid$mediaMid.$extension", "$prefix$mid.$extension", "$prefix$mid$mid.$extension").distinct()
-    else listOf("$prefix$mid.$extension", "$prefix$mid$mid.$extension").distinct()
+    if (mediaMid.isNotBlank()) listOf("$prefix$mediaMid.$extension", "$prefix$mediaMid$mediaMid.$extension").distinct()
+    else listOf("$prefix$mid$mid.$extension", "$prefix$mid.$extension").distinct()
 
 /** Numeric-only diagnostics, without media URLs or session credentials. */
 internal fun qqPlaybackRefusalCode(data: JSONObject): Int? {
@@ -78,23 +77,34 @@ internal fun qqPlaybackRefusalCode(data: JSONObject): Int? {
 }
 
 /** Only HTTPS Tencent music CDN URLs; API cookies are never sent to the CDN. */
-internal fun qqPlaybackUrls(data: JSONObject): List<String> {
+internal fun qqPlaybackNeedsValidation(url: String): Boolean =
+    url.toHttpUrlOrNull()?.queryParameterNames?.any { it.equals("src", ignoreCase = true) } == true
+
+internal fun qqPlaybackUrls(data: JSONObject, includeUnverified: Boolean = false): List<String> {
     val bases = data.optJSONArray("sip")?.takeIf { it.length() > 0 }
         ?: JSONArray().put("https://ws.stream.qqmusic.qq.com/")
     val items = data.optJSONArray("midurlinfo") ?: return emptyList()
+    fun normalized(value: String) = value.replaceFirst("http://", "https://")
+        .let { if (it.startsWith("//")) "https:$it" else it }
     return buildList {
         for (i in 0 until items.length()) {
             val item = items.optJSONObject(i) ?: continue
             if (item.optInt("result", 0) != 0) continue
-            val purl = item.optString("purl").takeIf(String::isNotBlank) ?: continue
-            for (j in 0 until bases.length()) {
-                val base = bases.optString(j).replaceFirst("http://", "https://")
-                    .let { if (it.startsWith("//")) "https:$it" else it }
-                val url = base.toHttpUrlOrNull()?.resolve(purl)?.newBuilder()?.scheme("https")?.build() ?: continue
-                if (url.port == 443 && url.username.isEmpty() && url.password.isEmpty() &&
-                    (url.host.endsWith(".qq.com") || url.host.endsWith(".qqmusic.com")) &&
-                    !url.encodedPath.substringAfterLast('/').startsWith("C400") &&
-                    url.queryParameterNames.none { it.equals("src", ignoreCase = true) }) add(url.toString())
+            for (raw in listOf(item.optString("purl"), item.optString("wifiurl")).filter(String::isNotBlank)) {
+                val purl = normalized(raw)
+                val candidates = buildList {
+                    purl.toHttpUrlOrNull()?.let(::add)
+                    for (j in 0 until bases.length()) {
+                        normalized(bases.optString(j)).toHttpUrlOrNull()?.resolve(purl)?.let(::add)
+                    }
+                }
+                for (candidate in candidates) {
+                    val url = candidate.newBuilder().scheme("https").build()
+                    if (url.port == 443 && url.username.isEmpty() && url.password.isEmpty() &&
+                        (url.host.endsWith(".qq.com") || url.host.endsWith(".qqmusic.com")) &&
+                        !url.encodedPath.substringAfterLast('/').startsWith("C400", ignoreCase = true) &&
+                        (includeUnverified || !qqPlaybackNeedsValidation(url.toString()))) add(url.toString())
+                }
             }
         }
     }.distinct()

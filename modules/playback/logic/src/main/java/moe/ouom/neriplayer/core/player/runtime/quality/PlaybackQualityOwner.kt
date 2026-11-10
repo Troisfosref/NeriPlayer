@@ -26,6 +26,7 @@ class PlaybackQualityOwner(
     val neteasePreferredQuality: String get() = mutablePreferredKeys.value.netease
     val youtubePreferredQuality: String get() = mutablePreferredKeys.value.youtube
     val biliPreferredQuality: String get() = mutablePreferredKeys.value.bili
+    val qqMusicPreferredQuality: String get() = mutablePreferredKeys.value.qqMusic
 
     fun rebindScope(scope: CoroutineScope) {
         refreshJobs.values.forEach { it.cancel() }
@@ -39,7 +40,8 @@ class PlaybackQualityOwner(
             PlaybackAudioSource.NETEASE -> current.copy(netease = key)
             PlaybackAudioSource.YOUTUBE_MUSIC -> current.copy(youtube = key)
             PlaybackAudioSource.BILIBILI -> current.copy(bili = key)
-            PlaybackAudioSource.LOCAL, PlaybackAudioSource.SUBSONIC, PlaybackAudioSource.QQ_MUSIC -> current
+            PlaybackAudioSource.QQ_MUSIC -> current.copy(qqMusic = key)
+            PlaybackAudioSource.LOCAL, PlaybackAudioSource.SUBSONIC -> current
         }
     }
 
@@ -47,13 +49,13 @@ class PlaybackQualityOwner(
         val key = optionKey.trim().lowercase()
         if (key.isBlank()) return
         val source = port.currentAudioSource() ?: return
-        if (source == PlaybackAudioSource.LOCAL || source == PlaybackAudioSource.SUBSONIC || source == PlaybackAudioSource.QQ_MUSIC) return
+        if (source == PlaybackAudioSource.LOCAL || source == PlaybackAudioSource.SUBSONIC) return
         if (key == mutablePreferredKeys.value.forSource(source)) return
         scope.launch { port.persistPreferredQuality(source, key) }
     }
 
     fun scheduleRefresh(source: PlaybackAudioSource, reason: String) {
-        if (source == PlaybackAudioSource.LOCAL || source == PlaybackAudioSource.SUBSONIC || source == PlaybackAudioSource.QQ_MUSIC) return
+        if (source == PlaybackAudioSource.LOCAL || source == PlaybackAudioSource.SUBSONIC) return
         refreshJobs.remove(source)?.cancel()
         refreshJobs[source] = scope.launch { port.refreshCurrentSong(source, reason) }
     }

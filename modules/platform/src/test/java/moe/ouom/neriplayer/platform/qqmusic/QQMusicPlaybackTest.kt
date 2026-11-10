@@ -14,7 +14,7 @@ import org.junit.Test
 import org.mockito.Mockito
 
 class QQMusicPlaybackTest {
-    @Test fun `standard vkey is first with authenticated web envelope`() = runBlocking {
+    @Test fun `MusicOne Android vkey is first with music credentials`() = runBlocking {
         val calls=mutableListOf<JSONObject>()
         val http=OkHttpClient.Builder().addInterceptor { chain ->
             val b=Buffer();requireNotNull(chain.request().body).writeTo(b)
@@ -22,19 +22,23 @@ class QQMusicPlaybackTest {
             val data=JSONObject().put("sip",JSONArray().put("https://isure.stream.qqmusic.qq.com/"))
                 .put("midurlinfo",JSONArray().put(JSONObject().put("result",0).put("purl","M500mediaFile.mp3?vkey=fixture")))
             Response.Builder().request(chain.request()).protocol(Protocol.HTTP_1_1).code(200).message("OK")
-                .body(JSONObject().put("code",0).put("req_0",JSONObject().put("code",0).put("data",data)).toString().toResponseBody()).build()
+                .body(JSONObject().put("code",0).put("req_1",JSONObject().put("code",0).put("data",data)).toString().toResponseBody()).build()
         }.build()
         val account=Mockito.mock(QQMusicAccountRepository::class.java)
         Mockito.`when`(account.cookie()).thenReturn("musicid=123; musickey=fixture")
-        Mockito.`when`(account.quality()).thenReturn(QQMusicQuality.STANDARD)
+        Mockito.`when`(account.quality()).thenReturn(QQMusicQuality.LOSSLESS)
         val song=requireNotNull(mapQQMusicSong(JSONObject("""{"mid":"catalogMid","file":{"media_mid":"mediaFile"}}""")))
-        val result=QQMusicRepository(account,QQMusicClient(http)).playback(song)
+        val result=QQMusicRepository(account,QQMusicClient(http)).playback(song,QQMusicQuality.STANDARD)
         assertEquals("standard",result.audioInfo?.qualityKey)
         assertEquals(1,calls.size)
-        assertEquals("vkey.GetVkeyServer",calls[0].getJSONObject("req_0").getString("module"))
-        assertEquals("CgiGetVkey",calls[0].getJSONObject("req_0").getString("method"))
-        assertFalse(calls[0].getJSONObject("req_0").getJSONObject("param").has("xcdn"))
-        assertEquals(19,calls[0].getJSONObject("comm").getInt("ct"))
+        Mockito.verify(account,Mockito.never()).quality()
+        val req=calls[0].getJSONObject("req_1")
+        assertEquals("music.vkey.GetVkey",req.getString("module"))
+        assertEquals("UrlGetVkey",req.getString("method"))
+        assertEquals("23",req.getJSONObject("param").getString("platform"))
+        assertEquals(11,calls[0].getJSONObject("comm").getInt("ct"))
+        assertEquals("123",calls[0].getJSONObject("comm").getString("qq"))
+        assertEquals("fixture",calls[0].getJSONObject("comm").getString("authst"))
     }
 
     @Test fun `unavailable higher qualities fall back and carry the real quality label`() = runBlocking {
@@ -120,7 +124,7 @@ class QQMusicPlaybackTest {
         val song=requireNotNull(mapQQMusicSong(JSONObject("""{"mid":"001exNOg2q7sDE","title":"茜さす","file":{"media_mid":"002sg0214BnHfE"}}""")))
         val result=QQMusicRepository(accounts,QQMusicClient(http)).playback(song)
         assertEquals("lossless",result.audioInfo?.qualityKey)
-        assertEquals(2,requests.size)
+        assertEquals(4,requests.size)
         assertEquals("CgiGetEVkey",requests.last().getJSONObject("req_1").getString("method"))
         val param=requests.last().getJSONObject("req_1").getJSONObject("param")
         assertEquals("20",param.getString("platform"));assertEquals(1,param.getInt("xcdn"));assertFalse(param.has("quality"))

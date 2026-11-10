@@ -1,5 +1,7 @@
 package moe.ouom.neriplayer.core.player.url
 
+import moe.ouom.neriplayer.core.player.quality.effectiveQQMusicQuality
+import moe.ouom.neriplayer.platform.qqmusic.api.QQMusicQuality
 import kotlinx.coroutines.CancellationException
 import moe.ouom.neriplayer.common.R as CoreCommonR
 import moe.ouom.neriplayer.core.player.PlayerManager
@@ -15,10 +17,11 @@ internal suspend fun PlayerManager.getQQMusicAudioUrl(
     sideEffects: RefreshResolverSideEffects,
     suppressError: Boolean
 ): SongUrlResult = try {
-    val result = PlayerDependencies.repositories.qqMusicRepository?.playback(song)
+    val result = PlayerDependencies.repositories.qqMusicRepository?.playback(song, QQMusicQuality.valueOf(effectiveQQMusicQuality().uppercase()))
         ?: throw QQMusicException(QQMusicException.Kind.NO_PLAY_URL)
     result.copy(audioInfo = result.audioInfo?.let { info -> info.copy(
-        qualityLabel = qualityLabelForNetease(info.qualityKey.orEmpty(), { getLocalizedString(it) })
+        qualityLabel = qualityLabelForNetease(info.qualityKey.orEmpty(), { getLocalizedString(it) }),
+        qualityOptions = buildQQMusicQualityOptions { getLocalizedString(it) }
     ) })
 } catch (cancelled: CancellationException) {
     throw cancelled
@@ -38,3 +41,10 @@ internal suspend fun PlayerManager.getQQMusicAudioUrl(
     }
     SongUrlResult.Failure
 }
+
+internal fun buildQQMusicQualityOptions(getLocalizedString: (Int) -> String) =
+    listOf("standard", "exhigh", "lossless").map { key ->
+        moe.ouom.neriplayer.data.model.playback.PlaybackQualityOption(
+            key, qualityLabelForNetease(key, getLocalizedString)
+        )
+    }

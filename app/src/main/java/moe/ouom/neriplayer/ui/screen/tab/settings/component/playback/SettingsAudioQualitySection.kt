@@ -263,6 +263,7 @@ internal fun SettingsAudioQualitySection(
                     highlightPulse = highlightPulse,
                     onHighlightFinished = onHighlightFinished
                 )
+                moe.ouom.neriplayer.ui.screen.qqmusic.QQAudioQualitySetting(mobileData = true)
             }
         }
     }

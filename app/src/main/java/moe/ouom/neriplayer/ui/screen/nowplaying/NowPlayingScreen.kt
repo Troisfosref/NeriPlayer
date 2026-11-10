@@ -1,5 +1,7 @@
 package moe.ouom.neriplayer.ui.screen.nowplaying
 
+import moe.ouom.neriplayer.data.model.qqmusic.isQQMusicSong
+
 /*
  * NeriPlayer - A unified Android player for streaming music and videos from multiple online platforms.
  * Copyright (C) 2025-2025 NeriPlayer developers
@@ -373,7 +375,8 @@ internal fun resolveNowPlayingPlaybackSourceType(
     isFromBiliTag: Boolean,
     currentMediaUrl: String?,
     playbackAudioSource: PlaybackAudioSource?,
-    isNeteaseLocalFallback: Boolean = false
+    isNeteaseLocalFallback: Boolean = false,
+    isQQMusicSong: Boolean = false
 ): PlaybackSourceType? {
     if (isLocalSong || isNeteaseLocalFallback) return PlaybackSourceType.LOCAL
 
@@ -387,6 +390,7 @@ internal fun resolveNowPlayingPlaybackSourceType(
         null -> Unit
     }
 
+    if (isQQMusicSong) return PlaybackSourceType.QQ_MUSIC
     if (isYouTubeMusicSong) return PlaybackSourceType.YOUTUBE_MUSIC
 
     val isFromNeteaseUrl = currentMediaUrl?.contains("music.126.net", ignoreCase = true) == true
@@ -584,7 +588,8 @@ fun NowPlayingScreen(
         isFromBiliTag = isFromBiliTag,
         currentMediaUrl = currentMediaUrl,
         playbackAudioSource = currentPlaybackAudioInfo?.source,
-        isNeteaseLocalFallback = currentPlaybackAudioInfo?.isNeteaseLocalFallback == true
+        isNeteaseLocalFallback = currentPlaybackAudioInfo?.isNeteaseLocalFallback == true,
+        isQQMusicSong = currentSong?.isQQMusicSong() == true
     )
     val playbackSourceSongKey = currentSong?.let {
         listOf(it.id.toString(), it.album, it.mediaUri.orEmpty(), it.localFilePath.orEmpty())

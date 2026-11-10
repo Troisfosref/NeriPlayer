@@ -713,57 +713,11 @@ internal fun favoriteSourceLabel(source: String): String {
         "youtubeMusic" -> "YouTube"
         "neteaseAlbum" -> stringResource(AppR.string.media_favorite_netease_album)
         "netease" -> "Netease"
+        "qqmusic" -> stringResource(CoreCommonR.string.settings_qq_music)
         "bili" -> "Bilibili"
         FAVORITE_SOURCE_NETEASE_ARTIST -> stringResource(CoreCommonR.string.library_favorite_source_artist)
         FAVORITE_SOURCE_BILI_ARTIST -> stringResource(CoreCommonR.string.library_artist_platform_bili)
         FAVORITE_SOURCE_YOUTUBE_ARTIST -> "YouTube"
         else -> source
-    }
-}
-
-@Composable
-internal fun QqMusicPlaylistList(
-    listState: LazyListState
-) {
-    val miniPlayerHeight = LocalMiniPlayerHeight.current
-
-    val cardShape = neriRoundedShape(12.dp)
-    LazyColumn(
-        state = listState,
-        contentPadding = PaddingValues(start = 8.dp, end = 8.dp, top = 8.dp, bottom = 8.dp + miniPlayerHeight),
-        verticalArrangement = Arrangement.spacedBy(4.dp),
-        modifier = Modifier.fillMaxSize()
-    ) {
-        // TODO: Implement QQ Music playlist list when type is available
-        item {
-            Card(
-                shape = cardShape,
-                colors = CardDefaults.cardColors(
-                    containerColor = Color.Transparent
-                ),
-                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-                modifier = Modifier
-                    .padding(horizontal = 8.dp, vertical = 4.dp)
-                    .clip(cardShape)
-            ) {
-                ListItem(
-                    headlineContent = { Text(stringResource(CoreCommonR.string.library_qqmusic_coming)) },
-                    supportingContent = {
-                        Text(stringResource(CoreCommonR.string.library_coming_soon), color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    },
-                    colors = ListItemDefaults.colors(
-                        containerColor = Color.Transparent
-                    ),
-                    leadingContent = {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.QueueMusic,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.size(56.dp)
-                        )
-                    }
-                )
-            }
-        }
     }
 }

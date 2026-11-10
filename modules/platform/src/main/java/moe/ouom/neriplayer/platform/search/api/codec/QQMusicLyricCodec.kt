@@ -39,14 +39,50 @@ private fun isQQMusicUntranslatedPlaceholder(text: String): Boolean {
 }
 
 fun decodeQQMusicLyricPayload(rawValue: String?): String? {
-    val sanitized = rawValue?.trim()?.takeIf { it.isNotEmpty() } ?: return null
-    val plainText = htmlUnescapeQQMusic(sanitized)
-    if (QQMusicLrcTimestampPattern.containsMatchIn(plainText)) {
-        return plainText
-    }
-    val decoded = decodeQQMusicBase64Lyric(plainText) ?: return null
-    return htmlUnescapeQQMusic(decoded)
-        .takeIf { QQMusicLrcTimestampPattern.containsMatchIn(it) }
+    val raw = rawValue?.trim()?.takeIf { it.isNotEmpty() && it.length <= 4 * 1024 * 1024 } ?: return null
+    val decrypted = if (raw.length % 16 == 0 && raw.all { it.isDigit() || it.lowercaseChar() in 'a'..'f' })
+        decryptQqQrcHex(raw).takeIf(String::isNotBlank) ?: return null else raw
+    val plain = htmlUnescapeQQMusic(decrypted)
+    convertQQMusicQrcToYrc(plain)?.let { return it }
+    if (QQMusicLrcTimestampPattern.containsMatchIn(plain)) return plain
+    val decoded = decodeQQMusicBase64Lyric(plain) ?: return null
+    val unescaped = htmlUnescapeQQMusic(decoded)
+    return convertQQMusicQrcToYrc(unescaped)
+        ?: unescaped.takeIf { QQMusicLrcTimestampPattern.containsMatchIn(it) }
+}
+
+/** Convert QQ word timings into the existing word-lyric format consumed throughout NeriPlayer. */
+internal fun convertQQMusicQrcToYrc(raw: String): String? {
+    val marker = "LyricContent=\""
+    val start = raw.indexOf(marker)
+    val body = if (start >= 0) {
+        val from = start + marker.length
+        val close = raw.lastIndexOf("/>").takeIf { it > from } ?: raw.length
+        val to = raw.lastIndexOf('"', close.coerceAtMost(raw.lastIndex)).takeIf { it >= from } ?: return null
+        raw.substring(from, to)
+    } else raw
+    val content = body.replace("&#10;", "\n").replace("&#13;", "\r")
+        .replace("&lt;", "<").replace("&gt;", ">")
+    val linePattern = Regex("^\\[(\\d+),(\\d+)](.*)$")
+    val wordPattern = Regex("\\((\\d+),(\\d+)\\)")
+    return content.lineSequence().mapNotNull { line ->
+        val match = linePattern.matchEntire(line.trim()) ?: return@mapNotNull null
+        val text = match.groupValues[3]
+        if (!wordPattern.containsMatchIn(text)) return@mapNotNull null
+        var cursor = 0
+        val converted = buildString {
+            append('[').append(match.groupValues[1]).append(',').append(match.groupValues[2]).append(']')
+            for (word in wordPattern.findAll(text)) {
+                val segment = text.substring(cursor, word.range.first)
+                cursor = word.range.last + 1
+                if (segment.isEmpty()) continue
+                append('(').append(word.groupValues[1]).append(',').append(word.groupValues[2])
+                    .append(",0)").append(segment)
+            }
+            append(text.substring(cursor))
+        }
+        converted.takeIf { wordPattern.replace(text, "").isNotBlank() }
+    }.joinToString("\n").takeIf(String::isNotBlank)
 }
 
 fun decodeQQMusicBase64Lyric(value: String): String? {
@@ -56,7 +92,7 @@ fun decodeQQMusicBase64Lyric(value: String): String? {
     }
     return runCatching {
         String(Base64.getDecoder().decode(compact), Charsets.UTF_8)
-    }.getOrNull()?.takeIf { QQMusicLrcTimestampPattern.containsMatchIn(it) }
+    }.getOrNull()?.takeIf { QQMusicLrcTimestampPattern.containsMatchIn(it) || Regex("\\[\\d+,\\d+]").containsMatchIn(it) }
 }
 
 private fun htmlUnescapeQQMusic(value: String): String {

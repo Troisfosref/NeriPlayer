@@ -27,6 +27,7 @@ import moe.ouom.neriplayer.core.download.storage.ManagedDownloadStorageJsonCodec
 import moe.ouom.neriplayer.common.logging.NPLogger
 import moe.ouom.neriplayer.data.local.media.LocalSongSupport
 import moe.ouom.neriplayer.data.model.SongItem
+import moe.ouom.neriplayer.data.model.qqmusic.isQQMusicSong
 import moe.ouom.neriplayer.data.model.stableKey
 import moe.ouom.neriplayer.platform.youtube.media.isYouTubeMusicSong
 import moe.ouom.neriplayer.data.model.settings.download.DownloadAudioQualitySelection
@@ -586,15 +587,20 @@ internal suspend fun AudioDownloadManager.executeDownloadSong(
             }
         }
 
-        val resolvedDownloadAudioQuality = downloadAudioQuality
+        val requestedDownloadAudioQuality = downloadAudioQuality
             ?.let { quality ->
                 DownloadAudioQualitySelection.normalized(
                     neteaseQuality = quality.neteaseQuality,
                     youtubeQuality = quality.youtubeQuality,
-                    biliQuality = quality.biliQuality
+                    biliQuality = quality.biliQuality,
+                    qqMusicQuality = quality.qqMusicQuality
                 )
             }
             ?: resolveDownloadAudioQualitySelection(context)
+        val resolvedDownloadAudioQuality = if (song.isQQMusicSong() && requestedDownloadAudioQuality.qqMusicQuality == null) {
+            requestedDownloadAudioQuality.copy(qqMusicQuality = DownloadHosts.sources.qqMusicRepository
+                ?.accounts?.quality()?.name?.lowercase() ?: "exhigh")
+        } else requestedDownloadAudioQuality
         val isYouTubeMusic = isYouTubeMusicSong(song)
         val isBili = AudioDownloadSourceResolver.isBiliSource(song)
         // 阶段契约由尝试层按 stage = "source_resolved" 和

@@ -29,6 +29,11 @@ internal fun PlayerManager.effectiveBiliQuality(): String {
     )
 }
 
+internal fun PlayerManager.effectiveQQMusicQuality(): String = resolveTrafficAwareQuality(
+    source = PlaybackAudioSource.QQ_MUSIC,
+    defaultQuality = qqMusicPreferredQuality
+)
+
 private fun PlayerManager.resolveTrafficAwareQuality(
     source: PlaybackAudioSource,
     defaultQuality: String
@@ -51,6 +56,8 @@ private fun PlayerManager.resolveTrafficAwareQuality(
             normalizeMobileDataYouTubeAudioQuality(mobileDataYouTubeAudioQuality)
         PlaybackAudioSource.BILIBILI ->
             normalizeMobileDataBiliAudioQuality(mobileDataBiliAudioQuality)
+        PlaybackAudioSource.QQ_MUSIC ->
+            moe.ouom.neriplayer.data.settings.playback.normalizeMobileDataQQMusicAudioQuality(mobileDataQQMusicAudioQuality)
         else -> defaultQuality
     }
 }

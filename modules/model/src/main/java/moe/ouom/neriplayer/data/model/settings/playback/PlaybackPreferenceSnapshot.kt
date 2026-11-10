@@ -33,6 +33,7 @@ data class PlaybackPreferenceSnapshot(
     val mobileDataNeteaseAudioQuality: String = DEFAULT_MOBILE_DATA_NETEASE_AUDIO_QUALITY,
     val mobileDataYouTubeAudioQuality: String = DEFAULT_MOBILE_DATA_YOUTUBE_AUDIO_QUALITY,
     val mobileDataBiliAudioQuality: String = DEFAULT_MOBILE_DATA_BILI_AUDIO_QUALITY,
+    val mobileDataQQMusicAudioQuality: String = "standard",
     val keepLastPlaybackProgress: Boolean = true,
     val rememberLongFormPlaybackProgress: Boolean = true,
     val keepPlaybackModeState: Boolean = true,

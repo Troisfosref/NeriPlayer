@@ -18,6 +18,9 @@ class QQMusicLyricsRepository(
     private val amllTtmlClient: AmllLyricsRepository,
     private val amllLyricsEnabledProvider: suspend () -> Boolean
 ) : NativeLyricSearchApi {
+    suspend fun getNativeLyrics(id: String): Pair<String?, String?> = api.getNativeLyrics(id)
+    suspend fun getNativeRomanizedLyrics(id: String): String? = api.getNativeRomanizedLyrics(id)
+
     override suspend fun search(keyword: String, page: Int): List<SongSearchInfo> =
         api.search(keyword, page)
 

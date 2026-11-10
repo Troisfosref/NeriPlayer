@@ -435,6 +435,7 @@ private fun DownloadAudioQualitySettings(
                 highlightPulse = highlightPulse,
                 onHighlightFinished = onHighlightFinished
             )
+            moe.ouom.neriplayer.ui.screen.qqmusic.QQAudioQualitySetting(download = true)
         }
     }
 

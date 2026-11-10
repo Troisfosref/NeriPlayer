@@ -62,6 +62,7 @@ import moe.ouom.neriplayer.data.model.settings.lyrics.resolveFloatingLyricsTrans
 import moe.ouom.neriplayer.data.model.settings.lyrics.resolveFloatingLyricsTranslationOutlineWidthDp
 import moe.ouom.neriplayer.data.settings.lyrics.resolveLyricFontScales
 import moe.ouom.neriplayer.data.model.settings.playback.PlaybackControlLayoutPreferences
+import moe.ouom.neriplayer.data.settings.playback.normalizeMobileDataQQMusicAudioQuality
 import moe.ouom.neriplayer.data.settings.playback.normalizeMobileDataBiliAudioQuality
 import moe.ouom.neriplayer.data.settings.playback.normalizeMobileDataNeteaseAudioQuality
 import moe.ouom.neriplayer.data.settings.playback.normalizeMobileDataYouTubeAudioQuality
@@ -253,6 +254,10 @@ class SettingsRepository(private val context: Context) {
                     )
             )
         }
+
+    val mobileDataQQMusicAudioQualityFlow: Flow<String> = dataStoreSettingFlow { prefs ->
+        normalizeMobileDataQQMusicAudioQuality(prefs[SettingsKeys.MOBILE_DATA_QQ_MUSIC_AUDIO_QUALITY])
+    }
 
     val mobileDataBiliAudioQualityFlow: Flow<String> =
         dataStoreSettingFlow { prefs ->
@@ -876,6 +881,12 @@ class SettingsRepository(private val context: Context) {
         updatePlaybackPreferenceSnapshot(context) {
             it.copy(mobileDataYouTubeAudioQuality = normalized)
         }
+    }
+
+    suspend fun setMobileDataQQMusicAudioQuality(value: String) {
+        val normalized = normalizeMobileDataQQMusicAudioQuality(value)
+        context.dataStore.edit { it[SettingsKeys.MOBILE_DATA_QQ_MUSIC_AUDIO_QUALITY] = normalized }
+        updatePlaybackPreferenceSnapshot(context) { it.copy(mobileDataQQMusicAudioQuality = normalized) }
     }
 
     suspend fun setMobileDataBiliAudioQuality(value: String) {

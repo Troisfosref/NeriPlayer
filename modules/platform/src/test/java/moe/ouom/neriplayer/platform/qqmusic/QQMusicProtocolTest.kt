@@ -20,9 +20,9 @@ class QQMusicProtocolTest {
 
     @Test fun `media MID owns filenames when different from catalog MID`() {
         val names = qqFilenames("M800", "mp3", "catalogMid", "fileMid")
-        assertEquals(listOf("M800fileMid.mp3", "M800fileMidfileMid.mp3", "M800catalogMid.mp3", "M800catalogMidcatalogMid.mp3"), names)
+        assertEquals(listOf("M800fileMid.mp3", "M800fileMidfileMid.mp3"), names)
         assertEquals("M800fileMid.mp3", names.first())
-        assertTrue(names.any { it.contains("catalogMid") })
+        assertFalse(names.any { it.contains("catalogMid") })
     }
 
     @Test fun `only authorized complete CDN candidates survive parsing`() {

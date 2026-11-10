@@ -18,6 +18,17 @@ class PlaybackMediaItemFactoryTest {
     private val context = mock(Context::class.java)
 
     @Test
+    fun `downloaded QQ files use local cache identity without requesting a remote quality`() {
+        val ref = QQMusicSongRef("fixtureMid", "actualFile")
+        val downloaded = song(id=ref.numericId,channelId=QQMusicSongRef.CHANNEL,
+            audioId=ref.mid,mediaUri=ref.mediaUri).copy(localFilePath="/storage/emulated/0/song.flac")
+        val result = PlaybackMediaItemFactory.cacheKey(downloaded,context,null,false,
+            {error("No remote preference")},{error("No remote preference")},
+            {error("No remote preference")},{error("No remote preference")},{error("No remote preference")})
+        assertTrue(result.startsWith("local-"))
+    }
+
+    @Test
     fun `QQ cache separates catalog identity and requested quality without reading other source preferences`() {
         val ref = QQMusicSongRef("fixtureMid", "actualFile")
         val qq = song(id = ref.numericId, channelId = QQMusicSongRef.CHANNEL,

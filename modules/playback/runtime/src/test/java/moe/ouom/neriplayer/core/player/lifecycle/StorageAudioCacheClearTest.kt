@@ -11,6 +11,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import moe.ouom.neriplayer.data.model.SongItem
+import moe.ouom.neriplayer.data.model.qqmusic.QQMusicSongRef
 import org.mockito.Mockito.doAnswer
 import org.mockito.Mockito.spy
 import org.junit.Assert.assertEquals
@@ -28,6 +29,20 @@ import org.robolectric.annotation.Config
 @Config(sdk = [28])
 class StorageAudioCacheClearTest {
     @get:Rule val temporary = TemporaryFolder()
+
+    @Test
+    fun `QQ cache retention protects all qualities and removes other QQ songs`() = withCache { cache ->
+        val ref=QQMusicSongRef("kept", "file")
+        val kept=song(12).copy(channelId=QQMusicSongRef.CHANNEL,audioId=ref.mid,mediaUri=ref.mediaUri)
+        store(cache,"qqmusic:kept:EXHIGH:v1",7)
+        store(cache,"qqmusic:kept:LOSSLESS:v1",11)
+        store(cache,"qqmusic:other:EXHIGH:v1",13)
+        store(cache,"netease-99-exhigh",17)
+        val result=clearAudioStorageCache(cache,listOf(kept),emptySet(),true)
+        assertTrue(result.success)
+        assertEquals(30L,result.freedBytes)
+        assertEquals(setOf("qqmusic:kept:EXHIGH:v1","qqmusic:kept:LOSSLESS:v1"),cache.keys)
+    }
 
     @Test
     fun `audio estimate follows recent song retention without removing cache spans`() = withCache { cache ->

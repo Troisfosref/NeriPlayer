@@ -106,7 +106,12 @@ internal suspend fun PlayerManager.resolveSongUrl(
     shouldApplyCacheMutation: () -> Boolean = { true }
 ): SongUrlResult {
     if (song.isQQMusicSong() && !isLocalSong(song)) {
-        try { PlayerDependencies.repositories.qqMusicRepository?.accounts?.load() }
+        try {
+            PlayerDependencies.repositories.qqMusicRepository?.accounts?.let { accounts ->
+                accounts.load()
+                qqMusicPreferredQuality = accounts.preferredQuality.name.lowercase()
+            }
+        }
         catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled }
         catch (_: Exception) { /* Complete audio caches remain usable without account storage. */ }
     }

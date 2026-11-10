@@ -70,6 +70,30 @@ class QQMusicClient(private val client: OkHttpClient) {
             params, cookie, compatibility || enhanced, ticketComm)
     }
 
+    internal suspend fun isFullLength(url: String, expectedMs: Long, quality: QQMusicQuality): Boolean {
+        if (expectedMs <= 0) return false
+        if (quality == QQMusicQuality.LOSSLESS) {
+            val request = Request.Builder().url(url).header("Range", "bytes=0-41").build()
+            val probe = client.newBuilder().callTimeout(5, java.util.concurrent.TimeUnit.SECONDS)
+                .connectTimeout(4, java.util.concurrent.TimeUnit.SECONDS)
+                .readTimeout(4, java.util.concurrent.TimeUnit.SECONDS).build()
+            val duration = probe.newCall(request).awaitResponse { response ->
+                if (!response.isSuccessful) null else response.body.byteStream().use {
+                    val header = ByteArray(42)
+                    var size = 0
+                    while (size < header.size) {
+                        val count = it.read(header, size, header.size - size)
+                        if (count <= 0) break
+                        size += count
+                    }
+                    qqFlacDuration(header.copyOf(size))
+                }
+            }
+            if (duration != null) return qqMediaDurationMatches(duration, expectedMs)
+        }
+        return qqExtractFullLength(url, expectedMs, quality)
+    }
+
     internal suspend fun post(key: String, module: String, method: String, params: JSONObject, cookie: String, compatibility: Boolean = false, commOverride: JSONObject? = null): JSONObject {
         val comm = commOverride ?: if (compatibility) JSONObject().put("cv", 4747474).put("ct", 24).put("format", "json")
             .put("inCharset", "utf-8").put("outCharset", "utf-8").put("notice", 0)
@@ -77,7 +101,7 @@ class QQMusicClient(private val client: OkHttpClient) {
         val body = JSONObject().put("comm", comm).put(key,
             JSONObject().put("module", module).put("method", method).put("param", params))
         val request = request("https://u.y.qq.com/cgi-bin/musicu.fcg", cookie)
-            .apply { if (compatibility) header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36") }
+            .apply { if (compatibility) header("Origin", "https://y.qq.com").header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36") }
             .post(body.toString().toRequestBody("application/json; charset=utf-8".toMediaType())).build()
         val root = execute(request)
         requireQQSuccess(root)

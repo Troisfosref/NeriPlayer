@@ -51,6 +51,7 @@ import moe.ouom.neriplayer.core.player.host.settingsRepo
 import moe.ouom.neriplayer.common.logging.NPLogger
 import moe.ouom.neriplayer.lyrics.lyricon.LyriconManager
 import moe.ouom.neriplayer.core.player.PlayerManager
+import moe.ouom.neriplayer.core.player.quality.observeQQMusicQualitySettings
 import moe.ouom.neriplayer.core.player.currentPositionMsOr
 import moe.ouom.neriplayer.core.player.audio.focus.StartupAudioFocusController
 import moe.ouom.neriplayer.core.player.audio.route.AudioDeviceRouteOwner
@@ -416,6 +417,7 @@ private fun PlayerManager.applyInitialPlaybackPreferences(
 ) {
     val initialPlaybackPreferences =
         startupPlaybackPreferences ?: readPlaybackPreferenceSnapshotSync(app)
+    mobileDataQQMusicAudioQuality = initialPlaybackPreferences.mobileDataQQMusicAudioQuality
     preferredQuality = initialPlaybackPreferences.audioQuality
     youtubePreferredQuality = initialPlaybackPreferences.youtubeAudioQuality
     biliPreferredQuality = initialPlaybackPreferences.biliAudioQuality
@@ -1123,6 +1125,7 @@ private fun PlayerManager.createCachedPlaybackDataSourceFactory(
 private fun PlayerManager.observePlaybackSettings() {
     attachLiveLyricSurfaces()
     observeBiliSubtitleLyricsSettings()
+    observeQQMusicQualitySettings()
     ioScope.launch {
         settingsRepo.audioQualityFlow.collect { q ->
             val previousQuality = preferredQuality
@@ -1164,6 +1167,7 @@ private fun PlayerManager.observePlaybackSettings() {
             val previousValue = mobileDataFollowDefaultAudioQuality
             mobileDataFollowDefaultAudioQuality = enabled
             if (previousValue != enabled) {
+                scheduleQualityRefresh(PlaybackAudioSource.QQ_MUSIC, "mobile_data_follow_default_quality_changed")
                 scheduleQualityRefresh(
                     source = PlaybackAudioSource.NETEASE,
                     reason = "mobile_data_follow_default_quality_changed"

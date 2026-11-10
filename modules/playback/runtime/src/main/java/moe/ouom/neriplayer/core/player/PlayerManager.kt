@@ -2,6 +2,8 @@
 
 package moe.ouom.neriplayer.core.player
 
+import moe.ouom.neriplayer.core.player.quality.effectiveQQMusicQuality
+
 /*
  * NeriPlayer - A unified Android player for streaming music and videos from multiple online platforms.
  * Copyright (C) 2025-2025 NeriPlayer developers
@@ -423,6 +425,9 @@ object PlayerManager {
     internal var biliPreferredQuality: String
         get() = playbackQualityOwner.biliPreferredQuality
         set(value) = playbackQualityOwner.setPreferredQuality(PlaybackAudioSource.BILIBILI, value)
+    internal var qqMusicPreferredQuality: String
+        get() = playbackQualityOwner.qqMusicPreferredQuality
+        set(value) = playbackQualityOwner.setPreferredQuality(PlaybackAudioSource.QQ_MUSIC, value)
 
     /**
      * 各平台的音质偏好, 供切换弹窗回显
@@ -436,6 +441,7 @@ object PlayerManager {
     internal var mobileDataNeteaseAudioQuality: String = "standard"
     internal var mobileDataYouTubeAudioQuality: String = "low"
     internal var mobileDataBiliAudioQuality: String = "low"
+    internal var mobileDataQQMusicAudioQuality: String = "standard"
     internal var playbackFadeInEnabled = true
     internal var playbackCrossfadeNextEnabled = true
     internal var playbackFadeInDurationMs = DEFAULT_FADE_DURATION_MS
@@ -1577,7 +1583,7 @@ object PlayerManager {
         youtubeQuality = ::effectiveYouTubeQuality,
         biliQuality = ::effectiveBiliQuality,
         neteaseQuality = ::effectiveNeteaseQuality,
-        qqMusicQuality = { PlayerDependencies.repositories.qqMusicRepository?.accounts?.preferredQuality?.name ?: "EXHIGH" }
+        qqMusicQuality = { effectiveQQMusicQuality().uppercase() }
     )
 
     internal fun buildNeteasePlaybackCacheKey(

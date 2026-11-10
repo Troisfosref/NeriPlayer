@@ -102,15 +102,25 @@ class QQMusicSearchApiTest {
     @Test
     fun `native lyrics decode both tracks or quietly give up`() = runTest {
         replies += 200 to """{"req":{"code":0,"data":{"lyric":"[00:01.00]hello","trans":"[00:01.00]你好"}}}"""
-        replies += 200 to """{"req":{"code":0}}"""
-        replies += 200 to """{"req":{"code":-1}}"""
-        replies += 200 to "{}"
-        replies += 500 to "busy"
-
         assertEquals("[00:01.00]hello" to "[00:01.00]你好", api.getNativeLyrics("mid-1"))
-        repeat(4) { assertEquals(null to null, api.getNativeLyrics("mid-1")) }
+        listOf(200 to """{"req":{"code":0}}""",200 to """{"req":{"code":-1}}""",
+            200 to "{}",500 to "busy").forEachIndexed { index, response ->
+            replies += response
+            replies += response
+            assertEquals(null to null,api.getNativeLyrics("missing-$index"))
+        }
         assertEquals("https://y.qq.com", requests.first().header("Referer"))
         assertEquals("json", requests.first().url.queryParameter("format"))
+    }
+
+    @Test
+    fun `native lyric tracks share one fetch including romanization`() = runTest {
+        replies += 200 to """{"req":{"code":0,"data":{"lyric":"[00:01.00]hello","trans":"[00:01.00]你好","roma":"[00:01.00]he lo"}}}"""
+        assertEquals("[00:01.00]hello",api.getNativeLyrics("cached").first)
+        assertEquals("[00:01.00]he lo",api.getNativeRomanizedLyrics("cached"))
+        assertEquals("[00:01.00]你好",api.getNativeLyrics("cached").second)
+        assertEquals(1,requests.size)
+        assertTrue(requests.first().url.queryParameter("data")!!.contains("\"qrc\":1"))
     }
 
     @Test

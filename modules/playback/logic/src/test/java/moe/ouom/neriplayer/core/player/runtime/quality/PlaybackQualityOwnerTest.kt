@@ -68,6 +68,23 @@ class PlaybackQualityOwnerTest {
         assertEquals("high", owner.preferredKeys.value.bili)
     }
 
+    @Test
+    fun `QQ quality is independent and uses the same persist and refresh path`() = runTest {
+        val port = RecordingPort(PlaybackAudioSource.QQ_MUSIC)
+        val owner = PlaybackQualityOwner(backgroundScope, port)
+        owner.setPreferredQuality(PlaybackAudioSource.QQ_MUSIC, "lossless")
+        owner.changeCurrentPlaybackQuality(" LOSSLESS ")
+        runCurrent()
+        assertTrue(port.persisted.isEmpty())
+        owner.changeCurrentPlaybackQuality(" STANDARD ")
+        owner.scheduleRefresh(PlaybackAudioSource.QQ_MUSIC, "quality_changed")
+        runCurrent()
+        assertEquals("lossless", owner.preferredKeys.value.qqMusic)
+        assertEquals("exhigh", owner.preferredKeys.value.netease)
+        assertEquals(listOf(PlaybackAudioSource.QQ_MUSIC to "standard"), port.persisted)
+        assertEquals(listOf(PlaybackAudioSource.QQ_MUSIC to "quality_changed"), port.refreshed)
+    }
+
     private class RecordingPort(private val source: PlaybackAudioSource?) : PlaybackQualityPort {
         val persisted = mutableListOf<Pair<PlaybackAudioSource, String>>()
         val refreshed = mutableListOf<Pair<PlaybackAudioSource, String>>()

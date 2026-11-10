@@ -8,6 +8,7 @@ import androidx.security.crypto.MasterKey
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.withContext
 import moe.ouom.neriplayer.platform.qqmusic.api.QQMusicQuality
 import moe.ouom.neriplayer.platform.qqmusic.api.parseQQCookies
@@ -18,6 +19,9 @@ data class QQMusicAccountState(val signedIn: Boolean = false, val savedAt: Long 
 
 /** Auth is separate from playlists/backups. Fail closed if encrypted storage cannot be opened. */
 class QQMusicAccountRepository(context: Context) {
+    private val mutableLibraryRevision = MutableStateFlow(0)
+    val libraryRevision = mutableLibraryRevision.asStateFlow()
+    fun notifyLibraryChanged() { mutableLibraryRevision.update { it + 1 } }
     private val mutableQuality = MutableStateFlow(QQMusicQuality.EXHIGH)
     val qualityState = mutableQuality.asStateFlow()
     @Volatile var preferredQuality: QQMusicQuality = QQMusicQuality.EXHIGH
