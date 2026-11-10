@@ -33,12 +33,14 @@ class QQMusicBrowseRepository(private val accounts: QQMusicAccountRepository, pr
         val c=credentials(); val id=qqAccountId(c); val result=mutableListOf<QQMusicPlaylist>(); var offset=0
         while (true) {
             val data=web("https://c.y.qq.com/rsc/fcgi-bin/fcg_user_created_diss",mapOf("hostuin" to id,"sin" to "$offset","size" to "100","format" to "json"),c).optJSONObject("data") ?: break
-            val raw=data.optJSONArray("disslist") ?: data.optJSONArray("list") ?: break
+            val modern=data.optJSONArray("disslist");val legacy=data.optJSONArray("list")
+            val count=maxOf(modern?.length() ?: 0,legacy?.length() ?: 0)
+            val raw=JSONArray().apply { (modern.objects()+legacy.objects()).forEach { put(it) } }
             val page=raw.objects().mapNotNull(::qqBrowsePlaylist)
             if(offset>0 && raw.length()>0 && page.all { p -> result.any { it.id==p.id } }) throw QQMusicException(QQMusicException.Kind.REQUEST_FAILED)
             result += page.filter { it.directory != 201 && it.title !in listOf("我喜欢","我喜欢的音乐","Qzone背景音乐","本地上传") }
-            if (raw.length()<100) break
-            offset+=raw.length()
+            if (count<100) break
+            offset+=count
         }
         return result.distinctBy { it.id }
     }
