@@ -307,6 +307,7 @@ fun HomeScreen(
         stringResource(CoreCommonR.string.home_title_brand_wave),
         stringResource(CoreCommonR.string.home_title_brand_call)
     ).distinct()
+    var qqRefreshKey by remember { mutableIntStateOf(0) }
     val titleSeed = rememberSaveable { (0..Int.MAX_VALUE).random() }
     val appBarTitle = titleOptions[titleSeed % titleOptions.size]
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(
@@ -442,6 +443,7 @@ fun HomeScreen(
                     HapticIconButton(
                         enabled = !offlineMode,
                         onClick = {
+                            qqRefreshKey++
                             if (isInternational) {
                                 vm.refreshYtMusicHome()
                             } else {
@@ -577,6 +579,9 @@ fun HomeScreen(
                     }
 
                     if (showOnlineFeeds) {
+                        item(key = "qq_music_home", span = { GridItemSpan(maxLineSpan) }) {
+                            moe.ouom.neriplayer.ui.screen.qqmusic.QQMusicHomeContent(refreshKey = qqRefreshKey)
+                        }
                         if (isInternational) {
                             if (showNeteaseTrending && ytmSections.guessYouLike != null) {
                                 addYouTubeMusicSongShelfSection(

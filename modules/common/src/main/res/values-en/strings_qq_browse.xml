@@ -1,0 +1,16 @@
+<resources>
+  <string name="qq_browse_login">Sign in to QQ Music in Settings</string>
+  <string name="qq_browse_refresh">Refresh</string>
+  <string name="qq_browse_liked">Liked songs</string>
+  <string name="qq_browse_created">My playlists</string>
+  <string name="qq_browse_collected">Saved playlists</string>
+  <string name="qq_browse_daily">Daily recommendations</string>
+  <string name="qq_browse_radio">For you</string>
+  <string name="qq_browse_recommended">Recommended playlists</string>
+  <string name="qq_browse_more">Show more</string>
+  <string name="qq_browse_retry">Could not load. Tap to retry</string>
+  <string name="qq_browse_empty">No items yet</string>
+  <string name="qq_browse_count">%1$d songs</string>
+  <string name="qq_browse_back">Back</string>
+  <string name="qq_browse_play_all">Play all</string>
+</resources>

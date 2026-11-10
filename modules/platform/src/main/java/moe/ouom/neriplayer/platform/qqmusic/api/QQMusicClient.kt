@@ -44,8 +44,8 @@ class QQMusicClient(private val client: OkHttpClient) {
         return post("req_1", "music.vkey.GetVkey", "UrlGetVkey", params, cookie, compatibility)
     }
 
-    private suspend fun post(key: String, module: String, method: String, params: JSONObject, cookie: String, compatibility: Boolean = false): JSONObject {
-        val comm = if (compatibility) JSONObject().put("cv", 4747474).put("ct", 24).put("format", "json")
+    internal suspend fun post(key: String, module: String, method: String, params: JSONObject, cookie: String, compatibility: Boolean = false, commOverride: JSONObject? = null): JSONObject {
+        val comm = commOverride ?: if (compatibility) JSONObject().put("cv", 4747474).put("ct", 24).put("format", "json")
             .put("inCharset", "utf-8").put("outCharset", "utf-8").put("notice", 0)
             .put("platform", "yqq.json").put("needNewCode", 1).put("uin", qqAccountId(cookie).ifBlank { "0" }) else qqComm(cookie)
         val body = JSONObject().put("comm", comm).put(key,
@@ -59,7 +59,7 @@ class QQMusicClient(private val client: OkHttpClient) {
         return result.optJSONObject("data") ?: throw QQMusicException(QQMusicException.Kind.REQUEST_FAILED)
     }
 
-    private suspend fun getJson(url: String, cookie: String): JSONObject = execute(request(url, cookie)
+    internal suspend fun getJson(url: String, cookie: String): JSONObject = execute(request(url, cookie)
         .header("Referer", "https://y.qq.com/portal/search.html")
         .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36").build())
 

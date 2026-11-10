@@ -199,6 +199,7 @@ internal fun libraryTabDisplayOrder(
         listOf(
             LibraryTab.LOCAL,
             LibraryTab.FAVORITE,
+            LibraryTab.QQMUSIC,
             LibraryTab.YTMUSIC,
             LibraryTab.NETEASE,
             LibraryTab.BILI,
@@ -208,6 +209,7 @@ internal fun libraryTabDisplayOrder(
         listOf(
             LibraryTab.LOCAL,
             LibraryTab.FAVORITE,
+            LibraryTab.QQMUSIC,
             LibraryTab.NETEASE,
             LibraryTab.YTMUSIC,
             LibraryTab.BILI,
@@ -515,7 +517,7 @@ fun LibraryScreen(
                             offlineMode = offlineMode
                         ) }
 
-                        LibraryTab.QQMUSIC -> QqMusicPlaylistList(
+                        LibraryTab.QQMUSIC -> moe.ouom.neriplayer.ui.screen.qqmusic.QQMusicLibraryContent(
                             listState = qqMusicListState
                         )
                     }
