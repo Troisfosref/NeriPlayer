@@ -45,6 +45,22 @@ class QQMusicBrowseTest {
         val params=body.getJSONObject("playlist").getJSONObject("param")
         assertEquals(201,params.getInt("dirid"));assertEquals(0L,params.getLong("disstid"));assertEquals(100,params.getInt("song_begin"))
     }
+    @Test fun `liked metadata uses the first track cover and real count`() = runBlocking {
+        val accounts=Mockito.mock(QQMusicAccountRepository::class.java)
+        Mockito.`when`(accounts.cookie()).thenReturn("musicid=123; musickey=fixture")
+        val http=OkHttpClient.Builder().addInterceptor { chain ->
+            val b=Buffer();requireNotNull(chain.request().body).writeTo(b)
+            val body=JSONObject(b.readUtf8())
+            assertEquals(1,body.getJSONObject("playlist").getJSONObject("param").getInt("song_num"))
+            Response.Builder().request(chain.request()).protocol(Protocol.HTTP_1_1).code(200).message("OK")
+                .body("""{"code":0,"playlist":{"code":0,"data":{"songlist":[{"mid":"abc","album":{"mid":"albumMid"}}],"total_song_num":117}}}""".toResponseBody()).build()
+        }.build()
+        val result=QQMusicBrowseRepository(accounts,QQMusicClient(http)).liked()
+        assertEquals("favorites",result.id)
+        assertEquals(117,result.count)
+        assertTrue(result.cover.orEmpty().contains("albumMid"))
+    }
+
     @Test fun `exactly one hundred created playlists finish on an empty following page`() = runBlocking {
         val accounts=Mockito.mock(QQMusicAccountRepository::class.java)
         Mockito.`when`(accounts.cookie()).thenReturn("musicid=123; musickey=fixture")

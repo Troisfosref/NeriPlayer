@@ -14,6 +14,29 @@ import org.junit.Test
 import org.mockito.Mockito
 
 class QQMusicPlaybackTest {
+    @Test fun `enhanced endpoint is first and includes authenticated full stream parameters`() = runBlocking {
+        val calls=mutableListOf<JSONObject>()
+        val http=OkHttpClient.Builder().addInterceptor { chain ->
+            val b=Buffer();requireNotNull(chain.request().body).writeTo(b)
+            val body=JSONObject(b.readUtf8());calls+=body
+            val data=JSONObject().put("sip",JSONArray().put("https://isure.stream.qqmusic.qq.com/"))
+                .put("midurlinfo",JSONArray().put(JSONObject().put("result",0).put("purl","M500mediaFile.mp3?vkey=fixture")))
+            Response.Builder().request(chain.request()).protocol(Protocol.HTTP_1_1).code(200).message("OK")
+                .body(JSONObject().put("code",0).put("req_1",JSONObject().put("code",0).put("data",data)).toString().toResponseBody()).build()
+        }.build()
+        val account=Mockito.mock(QQMusicAccountRepository::class.java)
+        Mockito.`when`(account.cookie()).thenReturn("musicid=123; musickey=fixture")
+        Mockito.`when`(account.quality()).thenReturn(QQMusicQuality.STANDARD)
+        val song=requireNotNull(mapQQMusicSong(JSONObject("""{"mid":"catalogMid","file":{"media_mid":"mediaFile"}}""")))
+        val result=QQMusicRepository(account,QQMusicClient(http)).playback(song)
+        assertEquals("standard",result.audioInfo?.qualityKey)
+        assertEquals(1,calls.size)
+        assertEquals("music.vkey.GetEVkey",calls[0].getJSONObject("req_1").getString("module"))
+        assertEquals("CgiGetEVkey",calls[0].getJSONObject("req_1").getString("method"))
+        assertEquals(1,calls[0].getJSONObject("req_1").getJSONObject("param").getInt("xcdn"))
+        assertEquals(24,calls[0].getJSONObject("comm").getInt("ct"))
+    }
+
     @Test fun `unavailable higher qualities fall back and carry the real quality label`() = runBlocking {
         val requests = mutableListOf<JSONObject>()
         val http = OkHttpClient.Builder().addInterceptor { chain ->
@@ -36,7 +59,7 @@ class QQMusicPlaybackTest {
         val song = requireNotNull(mapQQMusicSong(JSONObject("""{"mid":"catalogMid","file":{"media_mid":"actualFile"}}""")))
         val result = repository.playback(song)
         assertEquals("standard", result.audioInfo?.qualityKey)
-        assertEquals(listOf("F000", "F000", "M800", "M800", "M500"), requests.map {
+        assertEquals(listOf("F000", "F000", "F000", "M800", "M800", "M800", "M500"), requests.map {
             it.getJSONObject("req_1").getJSONObject("param").getJSONArray("filename").getString(0).take(4) })
         assertTrue(requests.all { it.getJSONObject("req_1").getJSONObject("param").getString("uin") == "456" })
     }
@@ -67,7 +90,8 @@ class QQMusicPlaybackTest {
             val body=JSONObject(b.readUtf8());requests+=body
             val p=body.getJSONObject("req_1").getJSONObject("param")
             val compat=p.getString("platform")=="20"
-            val path=if(compat) "F000002sg0214BnHfE.flac?vkey=fixture" else "M500002sg0214BnHfE.mp3?vkey=fixture"
+            val enhanced=body.getJSONObject("req_1").getString("method")=="CgiGetEVkey"
+            val path=if(compat && !enhanced) "F000002sg0214BnHfE.flac?vkey=fixture" else "M500002sg0214BnHfE.mp3?vkey=fixture"
             val data=JSONObject().put("sip",JSONArray().put("https://isure.stream.qqmusic.qq.com/"))
                 .put("midurlinfo",JSONArray().put(JSONObject().put("result",0).put("purl",path)))
             Response.Builder().request(chain.request()).protocol(Protocol.HTTP_1_1).code(200).message("OK")
@@ -79,7 +103,7 @@ class QQMusicPlaybackTest {
         val song=requireNotNull(mapQQMusicSong(JSONObject("""{"mid":"001exNOg2q7sDE","title":"茜さす","file":{"media_mid":"002sg0214BnHfE"}}""")))
         val result=QQMusicRepository(accounts,QQMusicClient(http)).playback(song)
         assertEquals("lossless",result.audioInfo?.qualityKey)
-        assertEquals(2,requests.size)
+        assertEquals(3,requests.size)
         val param=requests.last().getJSONObject("req_1").getJSONObject("param")
         assertEquals("20",param.getString("platform"));assertFalse(param.has("quality"));assertFalse(param.has("h5queryversion"))
         assertEquals("001exNOg2q7sDE",param.getJSONArray("songmid").getString(0))

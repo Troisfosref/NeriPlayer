@@ -29,6 +29,20 @@ class QQMusicBrowseRepository(private val accounts: QQMusicAccountRepository, pr
         return QQMusicProfile(id, info.text("nick","nickname","name","hostname").ifBlank { "QQ 用户 $id" },
             info.text("headpic","avatar","avatarUrl","logo").takeIf(String::isNotBlank)?.https())
     }
+    suspend fun liked(): QQMusicPlaylist {
+        val c = credentials()
+        val comm = qqComm(c).put("ct", 19).put("cv", 0).apply { remove("v") }
+        val data = client.post("playlist", "music.srfDissInfo.DissInfo", "CgiGetDiss",
+            JSONObject().put("disstid", 0L).put("dirid", 201)
+                .put("song_begin", 0).put("song_num", 1).put("tag", true)
+                .put("userinfo", true).put("orderlist", true).put("onlysonglist", false),
+            c, commOverride = comm)
+        val first = qqBrowseSongs(data.optJSONArray("songlist")).firstOrNull()
+        return QQMusicPlaylist(
+            id = "favorites", title = "我喜欢的音乐", cover = first?.coverUrl,
+            count = data.optInt("total_song_num", 0).coerceAtLeast(0), directory = 201
+        )
+    }
     suspend fun created(): List<QQMusicPlaylist> {
         val c=credentials(); val id=qqAccountId(c); val result=mutableListOf<QQMusicPlaylist>(); var offset=0
         while (true) {

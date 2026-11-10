@@ -42,14 +42,16 @@ class QQMusicRepository(val accounts: QQMusicAccountRepository, private val clie
         if (ref.mediaMid.isBlank()) refresh()
         repeat(2) {
             for (quality in accounts.quality().fallback()) {
-                suspend fun candidates(compatibility: Boolean): List<String> = try {
-                    qqPlaybackUrls(client.playback(ref.mid, ref.mediaMid, ref.songType, quality, cookie, compatibility))
+                suspend fun candidates(compatibility: Boolean, enhanced: Boolean = false): List<String> = try {
+                    qqPlaybackUrls(client.playback(ref.mid, ref.mediaMid, ref.songType, quality, cookie, compatibility, enhanced))
                         .filter { java.net.URI(it).path.substringAfterLast('/').startsWith(quality.prefix) }
                 } catch (error: QQMusicException) {
                     if (error.kind != QQMusicException.Kind.REQUEST_FAILED) throw error
                     emptyList()
                 }
-                val urls = candidates(false).ifEmpty { candidates(true) }
+                val urls = candidates(false, enhanced = true).ifEmpty {
+                    candidates(false).ifEmpty { candidates(true) }
+                }
                 if (urls.isEmpty()) continue
                 return@withLock SongUrlResult.Success(
                     url = urls.first(), candidateUrls = urls.drop(1), mimeType = quality.mimeType,

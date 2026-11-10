@@ -34,15 +34,24 @@ class QQMusicClient(private val client: OkHttpClient) {
             ?: throw QQMusicException(QQMusicException.Kind.REQUEST_FAILED)
     }
 
-    suspend fun playback(mid: String, mediaMid: String, type: Int, quality: QQMusicQuality, cookie: String, compatibility: Boolean = false): JSONObject {
+    suspend fun playback(mid: String, mediaMid: String, type: Int, quality: QQMusicQuality, cookie: String, compatibility: Boolean = false, enhanced: Boolean = false): JSONObject {
         val names = qqFilenames(quality.prefix, quality.extension, mid, mediaMid)
         val params = JSONObject().put("guid", guid).put("songmid", JSONArray(names.map { mid }))
             .put("songtype", JSONArray(names.map { type })).put("filename", JSONArray(names))
             .put("uin", qqAccountId(cookie).ifBlank { "0" }).put("loginflag", 1)
-            .put("platform", if (compatibility) "20" else "23").put("quality", quality.prefix).put("h5queryversion", 1)
+            .put("platform", if (compatibility || enhanced) "20" else "23").put("quality", quality.prefix).put("h5queryversion", 1)
             .put("nettype", "").put("cms", 0).put("firstlogin", 1).put("newver", 1).put("nohash", 0)
-        if (compatibility) listOf("quality", "h5queryversion", "nettype", "cms", "firstlogin", "newver", "nohash").forEach(params::remove)
-        return post("req_1", "music.vkey.GetVkey", "UrlGetVkey", params, cookie, compatibility)
+        if (compatibility || enhanced) listOf("quality", "h5queryversion", "nettype", "cms", "firstlogin", "newver", "nohash").forEach(params::remove)
+        if (enhanced) params.put("xcdn", 1)
+        // Some accounts can retrieve full streams with EVkey when legacy vkey returns no purl.
+        val enhancedComm = if (enhanced) JSONObject().put("ct", 24).put("cv", 0)
+            .put("format", "json").put("uin", qqAccountId(cookie).ifBlank { "0" })
+            .put("authst", qqMusicKey(cookie))
+            .put("tmeLoginType", qqComm(cookie).optInt("tmeLoginType", 2)) else null
+        return post("req_1",
+            if (enhanced) "music.vkey.GetEVkey" else "music.vkey.GetVkey",
+            if (enhanced) "CgiGetEVkey" else "UrlGetVkey",
+            params, cookie, compatibility || enhanced, enhancedComm)
     }
 
     internal suspend fun post(key: String, module: String, method: String, params: JSONObject, cookie: String, compatibility: Boolean = false, commOverride: JSONObject? = null): JSONObject {
