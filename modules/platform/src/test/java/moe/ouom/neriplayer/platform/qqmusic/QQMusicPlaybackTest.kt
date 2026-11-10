@@ -21,7 +21,7 @@ class QQMusicPlaybackTest {
             requireNotNull(chain.request().body).writeTo(buffer)
             val body = JSONObject(buffer.readUtf8())
             requests += body
-            val prefix = body.getJSONObject("req_1").getJSONObject("param").getString("quality")
+            val prefix = body.getJSONObject("req_1").getJSONObject("param").getJSONArray("filename").getString(0).take(4)
             val data = JSONObject().put("sip", JSONArray().put("https://isure.stream.qqmusic.qq.com/"))
                 .put("midurlinfo", JSONArray().put(JSONObject().put("result", 0)
                     .put("purl", if (prefix == "M500") "M500actualFile.mp3?vkey=fixture" else "")))
@@ -37,7 +37,7 @@ class QQMusicPlaybackTest {
         val result = repository.playback(song)
         assertEquals("standard", result.audioInfo?.qualityKey)
         assertEquals(listOf("F000", "F000", "M800", "M800", "M500"), requests.map {
-            it.getJSONObject("req_1").getJSONObject("param").getString("quality") })
+            it.getJSONObject("req_1").getJSONObject("param").getJSONArray("filename").getString(0).take(4) })
         assertTrue(requests.all { it.getJSONObject("req_1").getJSONObject("param").getString("uin") == "456" })
     }
 

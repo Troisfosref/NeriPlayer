@@ -106,7 +106,8 @@ internal class AppNavigationGraphOwner(
             popEnterTransition = { transparentDetailPopEnterTransition(presentation.coherentFeedbackEnabled) },
             popExitTransition = { transparentDetailPopExitTransition(presentation.coherentFeedbackEnabled) }) { entry ->
             val playlist = navigationGson.fromJson(entry.arguments?.getString("playlistJson"), moe.ouom.neriplayer.platform.qqmusic.QQMusicPlaylist::class.java)
-            presentation.renderScene("qq_playlist_detail/{playlistJson}") {
+            val qqRenderScene = presentation.renderScene
+            qqRenderScene("qq_playlist_detail/{playlistJson}") {
                 moe.ouom.neriplayer.ui.screen.qqmusic.QQMusicPlaylistScreen(playlist, { navController.popBackStack() },
                     { songs, index -> mediaActions.playSongs(songs, index, moe.ouom.neriplayer.ui.screen.qqmusic.qqPlaylistRoute(playlist)) })
             }
