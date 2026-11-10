@@ -10,6 +10,7 @@ import moe.ouom.neriplayer.data.model.qqmusic.QQMusicSongRef
 import moe.ouom.neriplayer.platform.qqmusic.api.QQMusicClient
 import moe.ouom.neriplayer.platform.qqmusic.api.QQMusicException
 import moe.ouom.neriplayer.platform.qqmusic.api.qqPlaybackUrls
+import moe.ouom.neriplayer.platform.qqmusic.api.qqPlaybackRefusalCode
 import moe.ouom.neriplayer.platform.qqmusic.auth.QQMusicAccountRepository
 import org.json.JSONArray
 
@@ -34,6 +35,7 @@ class QQMusicRepository(val accounts: QQMusicAccountRepository, private val clie
         var ref = QQMusicSongRef.from(song) ?: throw QQMusicException(QQMusicException.Kind.NO_PLAY_URL)
         val cookie = accounts.cookie()
         var refreshed = false
+        var upstreamRefusalCode: Int? = null
         suspend fun refresh() {
             val detail = client.songDetail(ref.mid, cookie)
             ref = QQMusicSongRef(ref.mid, detail.optJSONObject("file")?.optString("media_mid").orEmpty(), detail.optInt("type", ref.songType))
@@ -43,8 +45,11 @@ class QQMusicRepository(val accounts: QQMusicAccountRepository, private val clie
         repeat(2) {
             for (quality in accounts.quality().fallback()) {
                 suspend fun candidates(compatibility: Boolean, enhanced: Boolean = false): List<String> = try {
-                    qqPlaybackUrls(client.playback(ref.mid, ref.mediaMid, ref.songType, quality, cookie, compatibility, enhanced))
-                        .filter {
+                    val response = client.playback(ref.mid, ref.mediaMid, ref.songType, quality, cookie, compatibility, enhanced)
+                    qqPlaybackRefusalCode(response)?.let { code ->
+                        if (upstreamRefusalCode == null || code == 104003) upstreamRefusalCode = code
+                    }
+                    qqPlaybackUrls(response).filter {
                             val name = java.net.URI(it).path.substringAfterLast('/')
                             // Signed CDN stream names can be prefixed with M8 (e.g. M8F000...flac)
                             // even though the requested file is F000...flac.
@@ -54,8 +59,8 @@ class QQMusicRepository(val accounts: QQMusicAccountRepository, private val clie
                     if (error.kind != QQMusicException.Kind.REQUEST_FAILED) throw error
                     emptyList()
                 }
-                val urls = candidates(false, enhanced = true).ifEmpty {
-                    candidates(true, enhanced = true).ifEmpty {
+                val urls = candidates(true, enhanced = true).ifEmpty {
+                    candidates(false, enhanced = true).ifEmpty {
                         candidates(false).ifEmpty { candidates(true) }
                     }
                 }
@@ -69,11 +74,11 @@ class QQMusicRepository(val accounts: QQMusicAccountRepository, private val clie
                         mimeType = quality.mimeType, codecLabel = quality.extension.uppercase(), bitrateKbps = quality.bitrateKbps)
                 )
             }
-            if (refreshed) throw QQMusicException(QQMusicException.Kind.NO_PLAY_URL)
+            if (refreshed) throw QQMusicException(QQMusicException.Kind.NO_PLAY_URL, upstreamRefusalCode?.toString())
             val old = ref
             refresh()
-            if (ref == old) throw QQMusicException(QQMusicException.Kind.NO_PLAY_URL)
+            if (ref == old) throw QQMusicException(QQMusicException.Kind.NO_PLAY_URL, upstreamRefusalCode?.toString())
         }
-        throw QQMusicException(QQMusicException.Kind.NO_PLAY_URL)
+        throw QQMusicException(QQMusicException.Kind.NO_PLAY_URL, upstreamRefusalCode?.toString())
     }
 }

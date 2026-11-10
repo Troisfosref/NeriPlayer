@@ -37,29 +37,37 @@ class QQMusicClient(private val client: OkHttpClient) {
     suspend fun playback(mid: String, mediaMid: String, type: Int, quality: QQMusicQuality, cookie: String, compatibility: Boolean = false, enhanced: Boolean = false): JSONObject {
         val names = qqFilenames(quality.prefix, quality.extension, mid, mediaMid)
         val params = JSONObject().put("guid", guid).put("songmid", JSONArray(names.map { mid }))
-            .put("songtype", JSONArray(names.map { type })).put("filename", JSONArray(names))
+            .put("songtype", JSONArray(names.map { if (enhanced && compatibility) 0 else type })).put("filename", JSONArray(names))
             .put("uin", qqAccountId(cookie).ifBlank { "0" }).put("loginflag", 1)
             .put("platform", if (compatibility || enhanced) "20" else "23").put("quality", quality.prefix).put("h5queryversion", 1)
             .put("nettype", "").put("cms", 0).put("firstlogin", 1).put("newver", 1).put("nohash", 0)
         if (compatibility || enhanced) listOf("quality", "h5queryversion", "nettype", "cms", "firstlogin", "newver", "nohash").forEach(params::remove)
         if (enhanced && !compatibility) params.put("xcdn", 1)
-        // Some accounts can retrieve full streams with EVkey when legacy vkey returns no purl.
-        val enhancedComm = if (enhanced) JSONObject().put("ct", 24).put("cv", 0)
-            .put("format", "json").put("uin", qqAccountId(cookie).ifBlank { "0" })
-            .put("authst", qqMusicKey(cookie))
-            .put("tmeLoginType", qqComm(cookie).optInt("tmeLoginType", 2)) else null
-        return post("req_1",
+        // Standard unencrypted playback: req_0 + authenticated ct=19/cv=0.
+        // EVkey remains a fallback for accounts that require the alternate endpoint.
+        val standardVkey = enhanced && compatibility
+        val ticketComm = when {
+            standardVkey -> JSONObject().put("uin", qqAccountId(cookie).ifBlank { "0" })
+                .put("format", "json").put("ct", 19).put("cv", 0)
+                .put("authst", qqMusicKey(cookie))
+            enhanced -> JSONObject().put("ct", 24).put("cv", 0)
+                .put("format", "json").put("uin", qqAccountId(cookie).ifBlank { "0" })
+                .put("authst", qqMusicKey(cookie))
+                .put("tmeLoginType", qqComm(cookie).optInt("tmeLoginType", 2))
+            else -> null
+        }
+        return post(if (standardVkey) "req_0" else "req_1",
             when {
-                enhanced && compatibility -> "vkey.GetVkeyServer"
+                standardVkey -> "vkey.GetVkeyServer"
                 enhanced -> "music.vkey.GetEVkey"
                 else -> "music.vkey.GetVkey"
             },
             when {
-                enhanced && compatibility -> "CgiGetVkey"
+                standardVkey -> "CgiGetVkey"
                 enhanced -> "CgiGetEVkey"
                 else -> "UrlGetVkey"
             },
-            params, cookie, compatibility || enhanced, enhancedComm)
+            params, cookie, compatibility || enhanced, ticketComm)
     }
 
     internal suspend fun post(key: String, module: String, method: String, params: JSONObject, cookie: String, compatibility: Boolean = false, commOverride: JSONObject? = null): JSONObject {

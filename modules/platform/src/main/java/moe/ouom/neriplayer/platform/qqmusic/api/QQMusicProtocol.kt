@@ -58,12 +58,27 @@ enum class QQMusicQuality(val prefix: String, val extension: String, val bitrate
 }
 
 internal fun qqFilenames(prefix: String, extension: String, mid: String, mediaMid: String): List<String> =
-    if (mediaMid.isNotBlank()) listOf("$prefix$mediaMid.$extension", "$prefix$mediaMid$mediaMid.$extension").distinct()
-    else listOf("$prefix$mid$mid.$extension", "$prefix$mid.$extension").distinct()
+    if (mediaMid.isNotBlank()) listOf("$prefix$mediaMid.$extension",
+        "$prefix$mediaMid$mediaMid.$extension", "$prefix$mid.$extension", "$prefix$mid$mid.$extension").distinct()
+    else listOf("$prefix$mid.$extension", "$prefix$mid$mid.$extension").distinct()
+
+/** Numeric-only diagnostics, without media URLs or session credentials. */
+internal fun qqPlaybackRefusalCode(data: JSONObject): Int? {
+    val infos = data.optJSONArray("midurlinfo") ?: return null
+    for (i in 0 until infos.length()) {
+        val info = infos.optJSONObject(i) ?: continue
+        val code = info.optInt("result", 0).takeIf { it != 0 }
+            ?: info.optInt("code", 0).takeIf { it != 0 }
+            ?: info.optInt("errtype", 0).takeIf { it != 0 }
+        if (code != null) return code
+    }
+    return null
+}
 
 /** Only HTTPS Tencent music CDN URLs; API cookies are never sent to the CDN. */
 internal fun qqPlaybackUrls(data: JSONObject): List<String> {
-    val bases = data.optJSONArray("sip") ?: JSONArray().put("https://isure.stream.qqmusic.qq.com/")
+    val bases = data.optJSONArray("sip")?.takeIf { it.length() > 0 }
+        ?: JSONArray().put("https://ws.stream.qqmusic.qq.com/")
     val items = data.optJSONArray("midurlinfo") ?: return emptyList()
     return buildList {
         for (i in 0 until items.length()) {

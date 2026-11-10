@@ -29,6 +29,12 @@ internal suspend fun PlayerManager.getQQMusicAudioUrl(
         QQMusicException.Kind.VERIFICATION_REQUIRED -> CoreCommonR.string.qq_music_verification_required
         else -> CoreCommonR.string.qq_music_request_failed
     }
-    if (!suppressError) sideEffects.emitError { postPlayerEvent(PlayerEvent.ShowError(getLocalizedString(resource))) }
+    val qqCode = (error as? QQMusicException)?.diagnosticCode
+        ?.takeIf { it.length in 3..8 && it.all(Char::isDigit) }
+    if (!suppressError) sideEffects.emitError {
+        postPlayerEvent(PlayerEvent.ShowError(
+            getLocalizedString(resource) + (qqCode?.let { " (QQ $it)" } ?: "")
+        ))
+    }
     SongUrlResult.Failure
 }
