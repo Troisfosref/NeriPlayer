@@ -8,7 +8,7 @@ import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import org.json.JSONArray
 import org.json.JSONObject
 
-class QQMusicException(val kind: Kind) : IOException(kind.name) {
+class QQMusicException(val kind: Kind, val diagnosticCode: String? = null) : IOException(kind.name) {
     enum class Kind { LOGIN_REQUIRED, NO_PLAY_URL, REQUEST_FAILED, VERIFICATION_REQUIRED }
 }
 

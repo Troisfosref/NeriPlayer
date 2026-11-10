@@ -9,6 +9,8 @@ import moe.ouom.neriplayer.platform.qqmusic.api.parseQQCookies
 import moe.ouom.neriplayer.platform.qqmusic.api.qqHash
 import moe.ouom.neriplayer.platform.qqmusic.api.requireQQSuccess
 import okhttp3.FormBody
+import okhttp3.Cookie
+import okhttp3.CookieJar
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.MediaType.Companion.toMediaType
@@ -17,8 +19,13 @@ import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONObject
 import java.util.UUID
+import kotlinx.coroutines.CancellationException
 
-class QQMusicQrSession internal constructor(val image: ByteArray, internal val signature: String) {
+class QQMusicQrSession internal constructor(
+    val image: ByteArray,
+    internal val signature: String,
+    internal val cookies: QQMusicLoginCookies
+) {
     override fun toString(): String = "QQMusicQrSession(redacted)"
 }
 
@@ -29,9 +36,11 @@ class QQMusicQrResult(val status: QQMusicQrStatus, val cookie: String? = null) {
 }
 
 class QQMusicQrLogin(client: OkHttpClient) {
-    private val http = client.newBuilder().followRedirects(false).followSslRedirects(false).build()
+    private val http = client.newBuilder().followRedirects(false).followSslRedirects(false)
+        .cookieJar(CookieJar.NO_COOKIES).build()
 
     suspend fun create(): QQMusicQrSession {
+        val cookies = QQMusicLoginCookies()
         val url = url("https://ssl.ptlogin2.qq.com/ptqrshow", mapOf(
             "appid" to "716027609", "e" to "2", "l" to "M", "s" to "3", "d" to "72", "v" to "4",
             "t" to System.currentTimeMillis().toString(), "daid" to "383", "pt_3rd_aid" to "100497308",
@@ -39,11 +48,12 @@ class QQMusicQrLogin(client: OkHttpClient) {
         return http.newCall(request(url).build()).awaitResponse { response ->
             if (!response.isSuccessful) fail()
             val image = response.body.bytes()
-            val signature = responseCookies(response.headers.values("Set-Cookie"))["qrsig"] ?: fail()
+            cookies.saveFromResponse(response.request.url, Cookie.parseAll(response.request.url, response.headers))
+            val signature = cookies.loadForRequest(response.request.url).firstOrNull { it.name == "qrsig" }?.value ?: fail()
             if (image.size < 8 || !(image.take(3) == listOf(137, 80, 78).map(Int::toByte) ||
                     image.take(3) == listOf(255, 216, 255).map(Int::toByte) ||
                     image.take(3) == "GIF".toByteArray().toList())) fail()
-            QQMusicQrSession(image, signature)
+            QQMusicQrSession(image, signature, cookies)
         }
     }
 
@@ -53,9 +63,9 @@ class QQMusicQrLogin(client: OkHttpClient) {
             "ptredirect" to "0", "h" to "1", "t" to "1", "g" to "1", "from_ui" to "1", "ptlang" to "2052",
             "action" to "0-0-${System.currentTimeMillis()}", "js_ver" to "20102616", "js_type" to "1",
             "pt_uistyle" to "40", "aid" to "716027609", "daid" to "383", "pt_3rd_aid" to "100497308", "has_onekey" to "1"))
-        val seed = "qrsig=${session.signature}"
-        val response = execute(request(pollUrl, seed).build())
-        val callback = parseQQQrCallback(response.text)
+        val callback = atStage("QQ-01") {
+            parseQQQrCallback(execute(request(pollUrl).build(), session.cookies).text)
+        }
         val status = when (callback.first) {
             66 -> QQMusicQrStatus.WAITING_SCAN
             67 -> QQMusicQrStatus.WAITING_CONFIRM
@@ -64,19 +74,23 @@ class QQMusicQrLogin(client: OkHttpClient) {
             else -> QQMusicQrStatus.CANCELLED
         }
         if (status != QQMusicQrStatus.SUCCESS) return QQMusicQrResult(status)
-        val cookie = mergeCookies(seed, response.cookies)
-        return QQMusicQrResult(status, exchange(authorize(callback.second, cookie)))
+        val code = authorize(callback.second, session.cookies)
+        return QQMusicQrResult(status, atStage("QQ-05") { exchange(code) })
     }
 
-    private suspend fun authorize(redirect: String, seed: String): String {
-        val checked = redirect.toHttpUrlOrNull() ?: fail()
-        if (checked.scheme != "https" || checked.host !in setOf("ssl.ptlogin2.qq.com", "ssl.ptlogin2.graph.qq.com") ||
-            checked.encodedPath != "/check_sig" || checked.port != 443 || checked.username.isNotEmpty() || checked.password.isNotEmpty()) fail()
-        val signed = execute(request(redirect, seed).build())
-        val cookies = mergeCookies(seed, signed.cookies)
-        val skey = signed.cookies["p_skey"]?.takeIf(String::isNotBlank) ?: fail()
+    private suspend fun authorize(redirect: String, cookies: QQMusicLoginCookies): String {
+        val signed = atStage("QQ-02") {
+            val checked = redirect.toHttpUrlOrNull() ?: fail()
+            if (checked.scheme != "https" || checked.host !in setOf("ssl.ptlogin2.qq.com", "ssl.ptlogin2.graph.qq.com") ||
+                checked.encodedPath != "/check_sig" || checked.port != 443 || checked.username.isNotEmpty() || checked.password.isNotEmpty()) fail()
+            execute(request(redirect).build(), cookies)
+        }
         // Activate only the expected QQConnect session, never follow arbitrary redirects with cookies.
-        execute(request("https://graph.qq.com/oauth2.0/login_jump", cookies).build())
+        atStage("QQ-03") { execute(request(qqLoginJumpUrl(signed.location)).build(), cookies) }
+        val skey = atStage("QQ-02") {
+            cookies.loadForRequest("https://graph.qq.com/oauth2.0/authorize".toHttpUrl())
+                .firstOrNull { it.name == "p_skey" }?.value ?: fail()
+        }
         val state = UUID.randomUUID().toString().replace("-", "")
         val values = mapOf("response_type" to "code", "client_id" to "100497308",
             "redirect_uri" to "https://y.qq.com/portal/wx_redirect.html?login_type=1&surl=https://y.qq.com/",
@@ -84,8 +98,10 @@ class QQMusicQrLogin(client: OkHttpClient) {
             "src" to "1", "update_auth" to "1", "openapi" to "1010_1030", "g_tk" to qqHash(skey, 5381).toString(),
             "auth_time" to System.currentTimeMillis().toString(), "ui" to UUID.randomUUID().toString())
         val form = FormBody.Builder().apply { values.forEach { (key, value) -> add(key, value) } }.build()
-        val result = execute(request("https://graph.qq.com/oauth2.0/authorize", cookies).post(form).build())
-        return qqAuthorizationCode(result.location, state)
+        return atStage("QQ-04") {
+            val result = execute(request("https://graph.qq.com/oauth2.0/authorize").post(form).build(), cookies)
+            qqAuthorizationCode(result.location, state)
+        }
     }
 
     private suspend fun exchange(code: String): String {
@@ -110,27 +126,51 @@ class QQMusicQrLogin(client: OkHttpClient) {
 
     private class Reply(val text: String, val cookies: Map<String, String>, val location: String)
 
-    private suspend fun execute(request: Request): Reply = http.newCall(request).awaitResponse {
-        if (it.code !in 200..399) fail()
-        Reply(it.body.string(), responseCookies(it.headers.values("Set-Cookie")), it.header("Location").orEmpty())
+    private suspend fun execute(request: Request, cookies: QQMusicLoginCookies? = null): Reply {
+        val scopedCookies = cookies?.loadForRequest(request.url).orEmpty()
+        val outgoing = request.newBuilder().apply {
+            if (scopedCookies.isNotEmpty()) header("Cookie", scopedCookies.joinToString("; ") { "${it.name}=${it.value}" })
+        }.build()
+        return http.newCall(outgoing).awaitResponse {
+            if (it.code !in 200..399) fail()
+            val received = Cookie.parseAll(it.request.url, it.headers)
+            cookies?.saveFromResponse(it.request.url, received)
+            val valid = received.filter { cookie -> cookie.expiresAt > System.currentTimeMillis() && cookie.value.isNotEmpty() }
+            Reply(it.body.string(), valid.associate { cookie -> cookie.name to cookie.value }, it.header("Location").orEmpty())
+        }
     }
 
-    private fun request(url: String, cookie: String = ""): Request.Builder = Request.Builder().url(url)
+    private fun request(url: String): Request.Builder = Request.Builder().url(url)
         .header("Referer", if (url.contains("ptlogin2")) "https://xui.ptlogin2.qq.com/"
             else if (url.contains("graph.qq.com")) "https://graph.qq.com/oauth2.0/login_jump" else "https://y.qq.com/")
         .header("User-Agent", "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 Chrome/130.0.0.0 Mobile Safari/537.36")
-        .apply { if (cookie.isNotEmpty()) header("Cookie", cookie) }
 
     private fun url(base: String, values: Map<String, String>): String = base.toHttpUrl().newBuilder()
         .apply { values.forEach { (key, value) -> addQueryParameter(key, value) } }.build().toString()
-
-    private fun responseCookies(headers: List<String>): Map<String, String> =
-        headers.flatMap { parseQQCookies(it.substringBefore(';')).entries }.associate { it.toPair() }
 
     private fun mergeCookies(seed: String, values: Map<String, String>): String =
         (parseQQCookies(seed) + values).entries.joinToString("; ") { "${it.key}=${it.value}" }
 
     private fun fail(): Nothing = throw QQMusicException(QQMusicException.Kind.REQUEST_FAILED)
+
+    private suspend fun <T> atStage(code: String, block: suspend () -> T): T = try {
+        block()
+    } catch (cancelled: CancellationException) {
+        throw cancelled
+    } catch (error: QQMusicException) {
+        throw QQMusicException(error.kind, code)
+    } catch (_: Exception) {
+        throw QQMusicException(QQMusicException.Kind.REQUEST_FAILED, code)
+    }
+}
+
+internal fun qqLoginJumpUrl(location: String): String {
+    if (location.isBlank()) return "https://graph.qq.com/oauth2.0/login_jump"
+    val uri = location.toHttpUrlOrNull() ?: throw QQMusicException(QQMusicException.Kind.REQUEST_FAILED)
+    if (uri.scheme != "https" || uri.host != "graph.qq.com" || uri.encodedPath != "/oauth2.0/login_jump" ||
+        uri.port != 443 || uri.username.isNotEmpty() || uri.password.isNotEmpty())
+        throw QQMusicException(QQMusicException.Kind.REQUEST_FAILED)
+    return uri.toString()
 }
 
 internal fun parseQQQrCallback(raw: String): Pair<Int, String> {

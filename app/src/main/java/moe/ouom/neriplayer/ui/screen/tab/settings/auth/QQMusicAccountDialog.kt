@@ -38,6 +38,7 @@ internal fun QQMusicAccountDialog(onDismiss: () -> Unit) {
     var status by remember { mutableStateOf(QQMusicQrStatus.WAITING_SCAN) }
     var busy by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<Int?>(null) }
+    var errorCode by remember { mutableStateOf<String?>(null) }
     var rawCookie by remember { mutableStateOf("") }
     var quality by remember { mutableStateOf(QQMusicQuality.EXHIGH) }
     var creating by remember { mutableIntStateOf(0) }
@@ -53,6 +54,7 @@ internal fun QQMusicAccountDialog(onDismiss: () -> Unit) {
         if (account.signedIn) return@LaunchedEffect
         busy = true
         error = null
+        errorCode = null
         session = null
         try {
             session = login.create()
@@ -81,6 +83,7 @@ internal fun QQMusicAccountDialog(onDismiss: () -> Unit) {
                 } catch (cancelled: CancellationException) { throw cancelled }
                 catch (failure: QQMusicException) {
                     error = qqMusicErrorResource(failure)
+                    errorCode = failure.diagnosticCode
                     break
                 } catch (_: Exception) {
                     error = CoreCommonR.string.qq_music_request_failed
@@ -121,6 +124,7 @@ internal fun QQMusicAccountDialog(onDismiss: () -> Unit) {
                     visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation())
                 TextButton(onClick = {
                     scope.launch {
+                        errorCode = null
                         try { accounts.save(rawCookie); rawCookie = ""; onDismiss() }
                         catch (cancelled: CancellationException) { throw cancelled }
                         catch (_: IllegalArgumentException) { error = CoreCommonR.string.qq_music_cookie_invalid }
@@ -145,7 +149,7 @@ internal fun QQMusicAccountDialog(onDismiss: () -> Unit) {
                     }))
                 }
             }
-            error?.let { Text(stringResource(it), color = MaterialTheme.colorScheme.error) }
+            error?.let { Text(stringResource(it) + errorCode?.let { code -> " ($code)" }.orEmpty(), color = MaterialTheme.colorScheme.error) }
             TextButton(onClick = onDismiss) { Text(stringResource(CoreCommonR.string.action_close)) }
             Spacer(Modifier.height(16.dp))
         }
