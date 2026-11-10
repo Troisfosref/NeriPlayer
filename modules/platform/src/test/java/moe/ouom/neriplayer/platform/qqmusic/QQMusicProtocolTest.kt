@@ -38,6 +38,16 @@ class QQMusicProtocolTest {
         assertTrue(qqPlaybackUrls(response("https://isure.stream.qqmusic.qq.com/", "M800file.mp3", 1)).isEmpty())
     }
 
+    @Test fun `nonzero API response preserves numeric error code`() {
+        try {
+            requireQQSuccess(JSONObject().put("code",104003))
+            fail("Expected request failure")
+        } catch (error: QQMusicException) {
+            assertEquals(QQMusicException.Kind.REQUEST_FAILED,error.kind)
+            assertEquals("104003",error.diagnosticCode)
+        }
+    }
+
     @Test fun `upstream ticket refusal can be diagnosed without exposing URL`() {
         val response = JSONObject().put("midurlinfo", JSONArray().put(
             JSONObject().put("result", 104003).put("purl", "")))

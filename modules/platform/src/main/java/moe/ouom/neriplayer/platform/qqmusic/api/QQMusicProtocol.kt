@@ -42,11 +42,13 @@ internal fun qqComm(cookie: String): JSONObject = JSONObject()
         ?: if (qqMusicKey(cookie).startsWith("W_X")) 1 else 2)
 
 internal fun requireQQSuccess(json: JSONObject) {
-    when (json.optInt("code", -1)) {
+    val code = json.optInt("code", -1)
+    val diagnostic = code.takeIf { it > 0 }?.toString()
+    when (code) {
         0 -> Unit
-        301, 1000, 2000, 20271 -> throw QQMusicException(QQMusicException.Kind.LOGIN_REQUIRED)
-        20276 -> throw QQMusicException(QQMusicException.Kind.VERIFICATION_REQUIRED)
-        else -> throw QQMusicException(QQMusicException.Kind.REQUEST_FAILED)
+        301, 1000, 2000, 20271 -> throw QQMusicException(QQMusicException.Kind.LOGIN_REQUIRED, diagnostic)
+        20276 -> throw QQMusicException(QQMusicException.Kind.VERIFICATION_REQUIRED, diagnostic)
+        else -> throw QQMusicException(QQMusicException.Kind.REQUEST_FAILED, diagnostic)
     }
 }
 

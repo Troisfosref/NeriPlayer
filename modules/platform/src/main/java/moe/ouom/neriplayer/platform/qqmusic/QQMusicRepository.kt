@@ -57,6 +57,9 @@ class QQMusicRepository(val accounts: QQMusicAccountRepository, private val clie
                         }
                 } catch (error: QQMusicException) {
                     if (error.kind != QQMusicException.Kind.REQUEST_FAILED) throw error
+                    error.diagnosticCode?.toIntOrNull()?.let { code ->
+                        if (upstreamRefusalCode == null || code == 104003) upstreamRefusalCode = code
+                    }
                     emptyList()
                 }
                 val urls = candidates(true, enhanced = true).ifEmpty {
