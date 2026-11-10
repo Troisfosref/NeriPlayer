@@ -13,6 +13,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -50,7 +51,8 @@ fun QQMusicLibraryContent(listState: LazyListState, vm: QQMusicBrowseViewModel =
             item {
                 ListItem(headlineContent={Text(profile.data?.nickname ?: stringResource(CoreR.string.settings_qq_music))},
                     supportingContent={profile.data?.let {Text(it.id)}},
-                    leadingContent={profile.data?.avatar?.let{AsyncImage(it,null,Modifier.size(48.dp).clip(CircleShape),contentScale=ContentScale.Crop)}},trailingContent={TextButton(onClick=vm::refresh){Text(stringResource(CoreR.string.qq_browse_refresh))}})
+                    leadingContent={profile.data?.avatar?.let{AsyncImage(it,null,Modifier.size(48.dp).clip(CircleShape),contentScale=ContentScale.Crop)}},trailingContent={TextButton(onClick=vm::refresh){Text(stringResource(CoreR.string.qq_browse_refresh))}},
+                    colors=ListItemDefaults.colors(containerColor=Color.Transparent))
             }
             item {
                 val p=QQMusicPlaylist("favorites",stringResource(CoreR.string.qq_browse_liked),directory=201)

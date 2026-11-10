@@ -1,6 +1,5 @@
 package moe.ouom.neriplayer.ui.screen.qqmusic
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Audiotrack
@@ -8,6 +7,7 @@ import androidx.compose.material.icons.outlined.Star
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -17,6 +17,7 @@ import moe.ouom.neriplayer.data.settings.*
 import moe.ouom.neriplayer.platform.qqmusic.api.QQMusicQuality
 import moe.ouom.neriplayer.ui.screen.tab.settings.appearance.SettingsHomeCardSwitch
 import moe.ouom.neriplayer.ui.screen.tab.settings.component.playback.QualityOptionsDialog
+import moe.ouom.neriplayer.ui.screen.tab.settings.component.settingsItemClickable
 import moe.ouom.neriplayer.common.R as CoreR
 
 @Composable
@@ -41,9 +42,10 @@ internal fun QQAudioQualitySetting() {
     val labels=mapOf(QQMusicQuality.STANDARD to stringResource(CoreR.string.quality_standard),
         QQMusicQuality.EXHIGH to stringResource(CoreR.string.quality_very_high),
         QQMusicQuality.LOSSLESS to stringResource(CoreR.string.quality_lossless))
-    ListItem(modifier=Modifier.clickable {show=true},headlineContent={Text(stringResource(CoreR.string.qq_quality_default))},
-        supportingContent={Text(labels[quality].orEmpty())},
-        leadingContent={Icon(Icons.Filled.Audiotrack,null,Modifier.size(24.dp))})
+    ListItem(modifier=Modifier.settingsItemClickable {show=true},headlineContent={Text(stringResource(CoreR.string.qq_quality_default))},
+        supportingContent={Text(stringResource(CoreR.string.common_label_value_format,labels[quality].orEmpty(),quality.name.lowercase()))},
+        leadingContent={Icon(Icons.Filled.Audiotrack,null,Modifier.size(24.dp))},
+        colors=ListItemDefaults.colors(containerColor=Color.Transparent))
     if(show) QualityOptionsDialog(title=stringResource(CoreR.string.qq_quality_default),selectedValue=quality.name,
         options=QQMusicQuality.entries.map {it.name to labels[it].orEmpty()},onDismiss={show=false},onSelect={ value ->
             scope.launch { accounts.setQuality(QQMusicQuality.valueOf(value));show=false }
