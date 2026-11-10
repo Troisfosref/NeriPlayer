@@ -378,6 +378,7 @@ internal fun resolveNowPlayingPlaybackSourceType(
     if (isLocalSong || isNeteaseLocalFallback) return PlaybackSourceType.LOCAL
 
     when (playbackAudioSource) {
+        PlaybackAudioSource.QQ_MUSIC -> return PlaybackSourceType.QQ_MUSIC
         PlaybackAudioSource.SUBSONIC -> return PlaybackSourceType.SUBSONIC
         PlaybackAudioSource.NETEASE -> return PlaybackSourceType.NETEASE
         PlaybackAudioSource.BILIBILI -> return PlaybackSourceType.BILIBILI

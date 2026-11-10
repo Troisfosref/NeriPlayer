@@ -137,7 +137,7 @@ class SettingsAccountCardsTest {
         composeRule.onNodeWithTag("settingsAccountLogin:netease").performClick()
         composeRule.onNodeWithTag("settingsAccountLogout:bilibili").performClick()
         composeRule.onNodeWithTag("settingsAccountCard:netease").performClick()
-        composeRule.onNodeWithTag("settingsAccountLogin:qq").assertDoesNotExist()
+        composeRule.onNodeWithTag("settingsAccountLogin:qq").performScrollTo().assertIsDisplayed()
         composeRule.onNodeWithTag("settingsAccountLogout:qq").assertDoesNotExist()
         composeRule.runOnIdle {
             assertEquals(listOf(SettingsAccountPlatform.YouTube, SettingsAccountPlatform.Netease), loginCalls)

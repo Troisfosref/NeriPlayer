@@ -107,7 +107,8 @@ enum class SearchSource {
     YOUTUBE_MUSIC,
     NETEASE,
     BILIBILI,
-    LINK_RECOGNITION
+    LINK_RECOGNITION,
+    QQ_MUSIC
 }
 
 enum class NeteaseExploreSearchType(val apiType: Int) {
@@ -478,6 +479,7 @@ class ExploreViewModel(application: Application) : AndroidViewModel(application)
             "search start: source=$source, request=$requestVersion, keyword=$apiKeyword, display=$matchQuery"
         )
         when (source) {
+            SearchSource.QQ_MUSIC -> searchQQMusic(apiKeyword, matchQuery, requestVersion)
             SearchSource.NETEASE -> searchNetease(apiKeyword, matchQuery, requestVersion)
             SearchSource.BILIBILI -> searchBilibili(apiKeyword, matchQuery, requestVersion)
             SearchSource.YOUTUBE_MUSIC -> searchYouTubeMusic(apiKeyword, matchQuery, requestVersion)
@@ -519,6 +521,7 @@ class ExploreViewModel(application: Application) : AndroidViewModel(application)
                     return@launch
                 }
                 val result = when (source) {
+                    SearchSource.QQ_MUSIC -> fetchQQMusicSearchPage(keyword, matchQuery, nextPage)
                     SearchSource.NETEASE -> fetchNeteaseSearchPage(
                         keyword = keyword,
                         matchQuery = matchQuery,
@@ -564,6 +567,29 @@ class ExploreViewModel(application: Application) : AndroidViewModel(application)
                         searchLoadMoreError = searchErrorMessage(source, e),
                         searchHasMore = true
                     )
+                }
+            }
+        }
+    }
+
+    private suspend fun fetchQQMusicSearchPage(keyword: String, matchQuery: String, page: Int): ExploreSearchFetchResult {
+        val result = AppContainer.qqMusicRepository.search(keyword, page)
+        val songs = rankExploreSongSearchResults(matchQuery, result.songs)
+        return ExploreSearchFetchResult(songs.map { ExploreSearchResult.Song(it) }, page, result.hasMore)
+    }
+
+    private fun searchQQMusic(keyword: String, matchQuery: String, requestVersion: Long) {
+        searchJob = viewModelScope.launch {
+            try {
+                val result = fetchQQMusicSearchPage(keyword, matchQuery, 1)
+                updateSearchStateIfCurrent(requestVersion, SearchSource.QQ_MUSIC) {
+                    it.copy(searching = false, searchResults = result.songs, searchItems = result.items,
+                        searchPage = result.page, searchHasMore = result.hasMore)
+                }
+            } catch (cancelled: CancellationException) { throw cancelled }
+            catch (_: Exception) {
+                updateSearchStateIfCurrent(requestVersion, SearchSource.QQ_MUSIC) {
+                    it.copy(searching = false, searchError = feedbackText(CoreCommonR.string.qq_music_request_failed))
                 }
             }
         }
@@ -879,6 +905,7 @@ class ExploreViewModel(application: Application) : AndroidViewModel(application)
 
     private suspend fun resolveExploreLinkTarget(target: ExploreLinkTarget): ExploreSearchResult {
         return when (target) {
+            is ExploreLinkTarget.QQMusicSong -> ExploreSearchResult.Song(AppContainer.qqMusicRepository.song(target.mid))
             is ExploreLinkTarget.NeteaseSong -> ExploreSearchResult.Song(
                 fetchLinkedNeteaseSong(target.id)
             )
@@ -1384,6 +1411,7 @@ class ExploreViewModel(application: Application) : AndroidViewModel(application)
     private fun searchErrorMessage(source: SearchSource, error: Exception): UiText {
         val fallback = error.message ?: feedbackText(CoreCommonR.string.github_sync_failed_message)
         return when (source) {
+            SearchSource.QQ_MUSIC -> feedbackText(CoreCommonR.string.qq_music_request_failed)
             SearchSource.NETEASE -> feedbackText(CoreCommonR.string.error_netease_search, fallback)
             SearchSource.BILIBILI -> feedbackText(CoreCommonR.string.error_bilibili_search, fallback)
             SearchSource.YOUTUBE_MUSIC -> feedbackText(CoreCommonR.string.error_youtube_search, fallback)

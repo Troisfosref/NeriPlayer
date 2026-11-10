@@ -169,6 +169,7 @@ private fun qualityLabelForCachedSource(
     getLocalizedString: (Int) -> String
 ): String {
     return when (source) {
+        PlaybackAudioSource.QQ_MUSIC -> qualityLabelForNetease(key, getLocalizedString)
         PlaybackAudioSource.NETEASE -> qualityLabelForNetease(key, getLocalizedString)
         PlaybackAudioSource.BILIBILI -> qualityLabelForBili(key, getLocalizedString)
         PlaybackAudioSource.YOUTUBE_MUSIC -> qualityLabelForYouTube(key, getLocalizedString)

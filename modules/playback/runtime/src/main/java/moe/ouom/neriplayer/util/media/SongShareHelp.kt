@@ -1,5 +1,7 @@
 package moe.ouom.neriplayer.util.media
 
+import moe.ouom.neriplayer.data.model.qqmusic.QQMusicSongRef
+
 import moe.ouom.neriplayer.core.player.PlayerManager
 import moe.ouom.neriplayer.data.local.media.LocalSongSupport
 import moe.ouom.neriplayer.data.model.SongItem
@@ -8,6 +10,7 @@ import java.net.URI
 import java.util.Locale
 
 private val SHAREABLE_CATALOG_HOSTS = setOf(
+    "y.qq.com",
     "music.163.com",
     "y.music.163.com",
     "www.bilibili.com",
@@ -22,6 +25,7 @@ private val SHAREABLE_CATALOG_HOSTS = setOf(
 )
 
 fun buildRemoteSongShareUrl(originalSong: SongItem, queue: List<SongItem>): String? {
+    QQMusicSongRef.from(originalSong)?.let { return "https://y.qq.com/n/ryqq/songDetail/${it.mid}" }
     extractYouTubeMusicVideoId(originalSong.mediaUri)?.let { videoId ->
         if (videoId.isNotBlank()) {
             return "https://music.youtube.com/watch?v=$videoId"

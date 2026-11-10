@@ -7,7 +7,8 @@ enum class PlaybackAudioSource {
     NETEASE,
     BILIBILI,
     YOUTUBE_MUSIC,
-    SUBSONIC
+    SUBSONIC,
+    QQ_MUSIC
 }
 
 data class PlaybackQualityOption(
@@ -108,6 +109,6 @@ fun PreferredQualityKeys.forSource(source: PlaybackAudioSource): String? {
         PlaybackAudioSource.NETEASE -> netease
         PlaybackAudioSource.YOUTUBE_MUSIC -> youtube
         PlaybackAudioSource.BILIBILI -> bili
-        PlaybackAudioSource.LOCAL, PlaybackAudioSource.SUBSONIC -> null
+        PlaybackAudioSource.LOCAL, PlaybackAudioSource.SUBSONIC, PlaybackAudioSource.QQ_MUSIC -> null
     }
 }

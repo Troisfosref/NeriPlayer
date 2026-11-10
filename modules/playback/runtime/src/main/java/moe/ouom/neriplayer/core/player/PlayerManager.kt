@@ -1576,7 +1576,8 @@ object PlayerManager {
         neteaseFallbackEnabled = { neteaseAutoSourceSwitchEnabled || neteaseLocalSourceFallbackEnabled },
         youtubeQuality = ::effectiveYouTubeQuality,
         biliQuality = ::effectiveBiliQuality,
-        neteaseQuality = ::effectiveNeteaseQuality
+        neteaseQuality = ::effectiveNeteaseQuality,
+        qqMusicQuality = { PlayerDependencies.repositories.qqMusicRepository?.accounts?.preferredQuality?.name ?: "EXHIGH" }
     )
 
     internal fun buildNeteasePlaybackCacheKey(

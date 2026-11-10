@@ -9,6 +9,7 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 
 internal sealed class ExploreLinkTarget {
+    data class QQMusicSong(val mid: String) : ExploreLinkTarget()
     data class NeteaseSong(val id: Long) : ExploreLinkTarget()
     data class NeteasePlaylist(val id: Long) : ExploreLinkTarget()
     data class NeteaseArtist(val id: Long) : ExploreLinkTarget()
@@ -42,6 +43,11 @@ internal fun recognizeExploreLink(input: String): ExploreLinkTarget? {
 
 private fun recognizeLinkForHost(host: String, uri: URI, normalized: String): ExploreLinkTarget? {
     return when {
+        host == "y.qq.com" -> {
+            val params = queryParameters(uri.rawQuery)
+            val mid = params["songmid"] ?: uri.path?.substringAfter("/songDetail/", "")?.substringBefore('/')
+            mid?.takeIf { it.matches(Regex("[A-Za-z0-9]{1,64}")) }?.let { ExploreLinkTarget.QQMusicSong(it) }
+        }
         host.endsWith("music.163.com") -> recognizeNeteaseLink(uri)
         host == "163cn.tv" -> ExploreLinkTarget.NeteaseShortLink(normalized)
         isBiliHost(host) -> recognizeBiliLink(uri, normalized)

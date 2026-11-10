@@ -88,7 +88,7 @@ class SettingsAccountAuthControllerTest {
     }
 
     @Test
-    fun `unavailable qq platform does not open a dialog or clear an existing message`() {
+    fun `qq platform opens its own account dialog and preserves other platform state`() {
         messages += UiText.Literal("retained")
         dialogs.neteaseTab.intValue = 2
         dialogs.biliTab.intValue = 3
@@ -96,6 +96,7 @@ class SettingsAccountAuthControllerTest {
 
         controller.actions.openPlatformLogin(SettingsAccountPlatform.QqMusic)
         controller.actions.openPlatformSavedAuthorization(SettingsAccountPlatform.QqMusic)
+        assertTrue(dialogs.showQQMusicSheet)
 
         assertFalse(dialogs.showNeteaseSheet)
         assertFalse(dialogs.showBiliSheet)

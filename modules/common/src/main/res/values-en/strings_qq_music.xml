@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="qq_music_scan_hint">Scan with mobile QQ and confirm sign-in</string>
+    <string name="qq_music_confirm_hint">Scanned. Confirm sign-in in QQ</string>
+    <string name="qq_music_qr_expired">QR code expired or sign-in cancelled. Refresh to try again</string>
+    <string name="qq_music_refresh_qr">Refresh QR code</string>
+    <string name="qq_music_cookie_hint">Paste QQ Music cookies</string>
+    <string name="qq_music_import_cookie">Import session</string>
+    <string name="qq_music_cookie_invalid">Cookies must include a music account and music session key</string>
+    <string name="qq_music_preferred_quality">Preferred QQ Music quality</string>
+    <string name="qq_music_search_hint">Search QQ Music songs, or sign in to QQ Music in Settings</string>
+    <string name="qq_music_login_required">QQ Music session expired. Sign in again</string>
+    <string name="qq_music_unavailable">QQ Music did not return a playable full-length source</string>
+    <string name="qq_music_verification_required">QQ Music requires verification. Complete it in the official app and sign in again</string>
+    <string name="qq_music_request_failed">QQ Music request failed. Please try again later</string>
+    <string name="qq_music_storage_failed">Unable to read or save the QQ Music session</string>
+</resources>

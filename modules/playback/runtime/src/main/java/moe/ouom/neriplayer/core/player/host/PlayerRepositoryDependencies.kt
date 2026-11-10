@@ -26,6 +26,7 @@ import moe.ouom.neriplayer.platform.youtube.repository.YouTubeMusicPlaybackRepos
 import okhttp3.OkHttpClient
 
 interface PlayerRepositoryDependencies {
+    val qqMusicRepository: moe.ouom.neriplayer.platform.qqmusic.QQMusicRepository? get() = null
     val subsonicRepository: SubsonicRepository? get() = null
     val settingsRepo: SettingsRepository
     val biliCookieRepo: BiliCookieRepository

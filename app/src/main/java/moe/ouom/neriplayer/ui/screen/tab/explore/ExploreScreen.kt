@@ -208,17 +208,19 @@ internal fun exploreSearchSourceDisplayOrder(
     youtubeEnabled: Boolean
 ): List<SearchSource> {
     return if (!youtubeEnabled) {
-        listOf(SearchSource.NETEASE, SearchSource.BILIBILI, SearchSource.LINK_RECOGNITION)
+        listOf(SearchSource.NETEASE, SearchSource.QQ_MUSIC, SearchSource.BILIBILI, SearchSource.LINK_RECOGNITION)
     } else if (isInternational) {
         listOf(
             SearchSource.YOUTUBE_MUSIC,
             SearchSource.NETEASE,
+            SearchSource.QQ_MUSIC,
             SearchSource.BILIBILI,
             SearchSource.LINK_RECOGNITION
         )
     } else {
         listOf(
             SearchSource.NETEASE,
+            SearchSource.QQ_MUSIC,
             SearchSource.BILIBILI,
             SearchSource.YOUTUBE_MUSIC,
             SearchSource.LINK_RECOGNITION
@@ -325,6 +327,7 @@ internal fun shouldShowBiliPartsPicker(song: SongItem): Boolean {
 private fun searchSourceLabel(source: SearchSource): String {
     return when (source) {
         SearchSource.YOUTUBE_MUSIC -> stringResource(CoreCommonR.string.explore_tab_youtube)
+        SearchSource.QQ_MUSIC -> stringResource(CoreCommonR.string.settings_qq_music)
         SearchSource.NETEASE -> stringResource(AppR.string.platform_netease_short)
         SearchSource.BILIBILI -> stringResource(AppR.string.platform_bilibili)
         SearchSource.LINK_RECOGNITION -> stringResource(CoreCommonR.string.explore_tab_links)
@@ -1144,6 +1147,11 @@ fun ExploreScreen(
                                 tagChipBorderAlpha = tagChipBorderAlpha,
                                 isTabletLayout = isTabletLayout
                             )
+                        }
+                        SearchSource.QQ_MUSIC -> {
+                            Box(Modifier.fillMaxSize(), Alignment.Center) {
+                                Text(stringResource(CoreCommonR.string.qq_music_search_hint), style = MaterialTheme.typography.bodyLarge)
+                            }
                         }
                         SearchSource.BILIBILI -> {
                             Box(Modifier.fillMaxSize(), Alignment.Center) {

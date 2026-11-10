@@ -1,5 +1,8 @@
 package moe.ouom.neriplayer.core.player.download.lyrics
 
+import moe.ouom.neriplayer.data.model.qqmusic.QQMusicSongRef
+import moe.ouom.neriplayer.data.model.qqmusic.isQQMusicSong
+
 import moe.ouom.neriplayer.data.model.SongSourceTags
 import moe.ouom.neriplayer.core.download.host.DownloadHosts
 import moe.ouom.neriplayer.core.player.download.AudioDownloadManager
@@ -100,6 +103,14 @@ internal object AudioDownloadLyricsCoordinator {
             val isYouTubeMusic = isYouTubeMusicSong(song)
             val isBili = song.album.startsWith(SongSourceTags.BILIBILI)
             when {
+                song.isQQMusicSong() -> {
+                    val mid = QQMusicSongRef.from(song)?.mid
+                    if (mid != null && (shouldFetchPrimaryLyric || shouldFetchTranslatedLyric)) {
+                        val info = DownloadHosts.lyrics.qqMusicSearchApi?.getNativeSongInfo(mid)
+                        if (lyricText == null && shouldFetchPrimaryLyric) lyricText = info?.lyric
+                        if (translatedText == null && shouldFetchTranslatedLyric) translatedText = info?.translatedLyric
+                    }
+                }
                 song.isServerSong() -> {
                     romanizedText = resolveLocalLyric(song.matchedRomanizedLyric)
                     if (lyricText == null && shouldFetchPrimaryLyric) {

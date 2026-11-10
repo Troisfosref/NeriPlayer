@@ -61,6 +61,12 @@ internal fun SettingsLoginExpandedContent(
     highlightPulse: Int = 0,
     onHighlightFinished: (() -> Unit)? = null
 ) {
+    val qqAccount by AppContainer.qqMusicAccounts.state.collectAsStateWithLifecycle()
+    LaunchedEffect(Unit) {
+        try { AppContainer.qqMusicAccounts.load() }
+        catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled }
+        catch (_: Exception) { /* The account panel reports unavailable secure storage. */ }
+    }
     val biliVm = controller.biliVm
     val youtubeVm = controller.youtubeVm
     val neteaseVm = controller.neteaseVm
@@ -112,6 +118,12 @@ internal fun SettingsLoginExpandedContent(
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         SettingsAccountCardsContent(
             accounts = listOf(
+                SettingsAccountCardUiState(
+                    platform = SettingsAccountPlatform.QqMusic,
+                    hasSavedAuthorization = qqAccount.signedIn,
+                    authorizationComplete = qqAccount.signedIn,
+                    savedAtLabel = accountSavedAtText(qqAccount.savedAt)
+                ),
                 SettingsAccountCardUiState(
                     platform = SettingsAccountPlatform.Netease,
                     hasSavedAuthorization = netease.hasSavedCookies,

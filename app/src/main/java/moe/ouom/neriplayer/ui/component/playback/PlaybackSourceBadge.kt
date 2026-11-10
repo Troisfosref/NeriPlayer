@@ -48,7 +48,8 @@ enum class PlaybackSourceType {
     BILIBILI,
     YOUTUBE_MUSIC,
     LOCAL,
-    SUBSONIC
+    SUBSONIC,
+    QQ_MUSIC
 }
 
 @Composable
@@ -109,6 +110,11 @@ fun PlaybackSourceBadge(
                 )
             }
 
+            PlaybackSourceType.QQ_MUSIC -> {
+                Icon(painterResource(moe.ouom.neriplayer.R.drawable.ic_qq_music),
+                    contentDescription = null, modifier = Modifier.size(16.dp))
+                Text(stringResource(CoreCommonR.string.settings_qq_music), style = MaterialTheme.typography.labelSmall)
+            }
             PlaybackSourceType.SUBSONIC -> {
                 Icon(imageVector = Icons.Outlined.LibraryMusic,
                     contentDescription = null, modifier = Modifier.size(16.dp))

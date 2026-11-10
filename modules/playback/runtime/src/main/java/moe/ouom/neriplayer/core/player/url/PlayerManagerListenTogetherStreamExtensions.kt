@@ -1,5 +1,7 @@
 package moe.ouom.neriplayer.core.player.url
 
+import moe.ouom.neriplayer.data.model.qqmusic.isQQMusicSong
+
 import moe.ouom.neriplayer.data.model.server.isServerSong
 
 import moe.ouom.neriplayer.data.identity.stableKey
@@ -104,6 +106,7 @@ internal fun resolveListenTogetherPublishedStreamAudioInfo(
 
 internal fun PlayerManager.listenTogetherPlaybackSource(song: SongItem): PlaybackAudioSource {
     return when {
+        song.isQQMusicSong() -> PlaybackAudioSource.QQ_MUSIC
         song.isServerSong() -> PlaybackAudioSource.SUBSONIC
         song.channelId == ListenTogetherChannels.YOUTUBE_MUSIC || isYouTubeMusicTrack(song) ->
             PlaybackAudioSource.YOUTUBE_MUSIC
@@ -201,7 +204,7 @@ internal fun listenTogetherQualityRank(
         PlaybackAudioSource.NETEASE -> NETEASE_LISTEN_TOGETHER_QUALITY_ORDER
         PlaybackAudioSource.BILIBILI -> BILI_LISTEN_TOGETHER_QUALITY_ORDER
         PlaybackAudioSource.YOUTUBE_MUSIC -> YOUTUBE_LISTEN_TOGETHER_QUALITY_ORDER
-        PlaybackAudioSource.LOCAL, PlaybackAudioSource.SUBSONIC -> emptyList()
+        PlaybackAudioSource.LOCAL, PlaybackAudioSource.SUBSONIC, PlaybackAudioSource.QQ_MUSIC -> emptyList()
     }.indexOf(normalized).takeIf { it >= 0 }
 }
 
@@ -230,7 +233,7 @@ private fun normalizeListenTogetherQualityKey(
         PlaybackAudioSource.YOUTUBE_MUSIC -> normalized.takeIf {
             it in YOUTUBE_LISTEN_TOGETHER_QUALITY_ORDER
         }
-        PlaybackAudioSource.LOCAL, PlaybackAudioSource.SUBSONIC -> null
+        PlaybackAudioSource.LOCAL, PlaybackAudioSource.SUBSONIC, PlaybackAudioSource.QQ_MUSIC -> null
     }
 }
 
@@ -239,6 +242,7 @@ private fun listenTogetherSourceKey(source: PlaybackAudioSource): String {
         PlaybackAudioSource.NETEASE -> "netease"
         PlaybackAudioSource.BILIBILI -> "bili"
         PlaybackAudioSource.YOUTUBE_MUSIC -> "youtube"
+        PlaybackAudioSource.QQ_MUSIC -> "qqmusic"
         PlaybackAudioSource.SUBSONIC -> "subsonic"
         PlaybackAudioSource.LOCAL -> "local"
     }
@@ -341,13 +345,13 @@ internal fun PlayerManager.listenTogetherFallbackStreamUrls(song: SongItem): Lis
 }
 
 internal fun PlayerManager.listenTogetherFallbackResult(song: SongItem): SongUrlResult.Success? {
-    if (song.isServerSong()) return null
+    if (song.isServerSong() || song.isQQMusicSong()) return null
     val source = listenTogetherPlaybackSource(song)
     val preferredQualityKey = when (source) {
         PlaybackAudioSource.NETEASE -> effectiveNeteaseQuality()
         PlaybackAudioSource.BILIBILI -> effectiveBiliQuality()
         PlaybackAudioSource.YOUTUBE_MUSIC -> effectiveYouTubeQuality()
-        PlaybackAudioSource.LOCAL, PlaybackAudioSource.SUBSONIC -> ""
+        PlaybackAudioSource.LOCAL, PlaybackAudioSource.SUBSONIC, PlaybackAudioSource.QQ_MUSIC -> ""
     }
     val legacyAudioInfo = listenTogetherFallbackAudioInfo(song)
     val candidates = orderListenTogetherStreamUrlsForPreference(
@@ -382,7 +386,7 @@ internal fun PlayerManager.listenTogetherPreferredQualityKey(song: SongItem): St
         PlaybackAudioSource.NETEASE -> effectiveNeteaseQuality()
         PlaybackAudioSource.BILIBILI -> effectiveBiliQuality()
         PlaybackAudioSource.YOUTUBE_MUSIC -> effectiveYouTubeQuality()
-        PlaybackAudioSource.LOCAL, PlaybackAudioSource.SUBSONIC -> null
+        PlaybackAudioSource.LOCAL, PlaybackAudioSource.SUBSONIC, PlaybackAudioSource.QQ_MUSIC -> null
     }
 }
 
@@ -436,6 +440,7 @@ internal fun buildListenTogetherFallbackAudioInfo(
                 }
             )
         }
+        PlaybackAudioSource.QQ_MUSIC -> PlaybackAudioInfo(source = PlaybackAudioSource.QQ_MUSIC)
         PlaybackAudioSource.SUBSONIC -> PlaybackAudioInfo(source = PlaybackAudioSource.SUBSONIC)
         PlaybackAudioSource.LOCAL -> PlaybackAudioInfo(source = PlaybackAudioSource.LOCAL)
     }

@@ -125,7 +125,7 @@ See the [API contract](docs/music-server-api.md) for protocol and client behavio
 
 ### 🎧 Playback and audio quality
 
-- **Multi-source and local playback**: NetEase, Bilibili, YouTube Music, and local audio share one queue.
+- **Multi-source and local playback**: NetEase, QQ Music, Bilibili, YouTube Music, and local audio share one queue.
 - **Playback fallback**: NetEase downgrades quality first; with the Bilibili fallback enabled, candidates match by title, artist, and duration, and repeated failures skip automatically.
 - **YouTube playback compatibility**: valid identity cookies are preserved and rotated; when a cached `player.js` or playback candidate is rejected, the app falls back to EJS/HLS instead of retrying the same candidate.
 - **Audio effects**: a self-built DSP with built-in presets, a 10-band equalizer, AutoEQ import, loudness leveling, and 32-bit high-resolution output — fully bypassed when off.
@@ -250,7 +250,7 @@ For release build and signing details, see
 | **Bilibili** | Web and QR login, video search, created and subscribed favorites, collections, multi-part audio playback, and downloads; home adds Hot and Original music charts plus popular music videos; link recognition keeps the selected part and restores collection context from `season_id`; comments support hot/latest sorting, paged nested replies, copy, and signed-in interaction | Audio playback workflow rather than a full video feed |
 | **YouTube Music** | Login, home/library playlist browsing, playlist detail, search, and playback compatibility | Content access remains subject to platform rules and account permissions |
 | **Self-Hosted Music Server**<br>*(Navidrome / OpenSubsonic)* | Browse and search albums, songs, and artists; view artist albums; play with existing player, artwork, and lyrics; local favorites, playlist management, and original-file offline downloads | **Preview (limited testing)**; compatibility and stability across servers, libraries, and networks still need verification; server write-back, Listen Together, and profile migration are not wired up yet |
-| **QQ Music** | Now Playing metadata and lyric completion | No login, playback, or library pages |
+| **QQ Music** | QQ QR login / cookie import, paged song search, song links, playback, lyrics, local playlists and downloads | Initial integration; cloud playlists, favorites sync, WeChat login and Listen Together are not connected. See [QQ Music notes](docs/qq-music.md) |
 | **Local Audio** | Share/open import, device and folder scanning, playback, artist grouping, sharing, and playlist management | Local file playback and management |
 
 ---
@@ -351,7 +351,7 @@ the commit history.
 - **Audio output**: Enabling 32-bit high-resolution output bypasses loudness leveling, channel balance, audio visualization, and in-app playback speed; turn the toggle off when you need those features.
 - **Bluetooth car**: Because AVRCP lacks a dedicated lyric field, car lyrics are sent through the track title field; refresh behavior and artwork transfer depend on your phone OS and head unit implementation. Android Auto uses its standard in-car UI, and no standalone Android Automotive OS build is provided.
 - **Lyrics**: Transliteration requires transliteration data in the platform response or embedded tags. Generated lyric cards live in the app cache directory and can be released by cache cleanup. ColorOS lock-screen lyrics are experimental, require vendor support plus Root/Shizuku, and should be re-checked after system updates.
-- **Platform scope**: Bilibili focuses on search, favorites, collections, and audio playback rather than a full video discovery feed. QQ Music is used only for Now Playing metadata and lyric completion.
+- **Platform scope**: Bilibili focuses on search, favorites, collections, and audio playback rather than a full video discovery feed. QQ Music supports account login, song search and playback; cloud library and sync remain future work.
 - **Sync**: Remote sync files are not end-to-end encrypted. Configuration exports exclude login state by default; if you choose to include auth credentials, set a password and keep it safe — the password is never stored inside the exported file and cannot be recovered if lost. Concurrent updates on the same branch report a conflict rather than force-overwriting remote commits.
 - **Other**: Long-audio position memory never overrides an explicit start position and does not sync back to third-party platform history. Bilibili SponsorBlock queries a public API and remains disabled during Listen Together sessions.
 

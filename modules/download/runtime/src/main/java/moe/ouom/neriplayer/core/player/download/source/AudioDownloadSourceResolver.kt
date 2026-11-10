@@ -45,6 +45,14 @@ internal object AudioDownloadSourceResolver {
 
     internal fun isBiliSource(song: SongItem): Boolean = song.identity().album == "bilibili"
 
+    internal suspend fun resolveQQMusic(song: SongItem): AudioDownloadManager.ResolvedDownloadSource {
+        val source = DownloadHosts.sources.qqMusicRepository?.playback(song)
+            ?: throw java.io.IOException("QQ Music source is unavailable")
+        return AudioDownloadManager.ResolvedDownloadSource(url = source.url, mimeType = source.mimeType,
+            durationMs = source.durationMs,
+            fileExtensionHint = if (source.mimeType == "audio/flac") "flac" else "mp3")
+    }
+
     internal suspend fun resolveServer(song: SongItem): AudioDownloadManager.ResolvedDownloadSource {
         val repository = DownloadHosts.sources.subsonicRepository ?: throw SubsonicException.accountUnavailable()
         val source = repository.download(song)
