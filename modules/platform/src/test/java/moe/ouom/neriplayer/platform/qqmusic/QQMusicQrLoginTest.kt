@@ -1,5 +1,7 @@
 package moe.ouom.neriplayer.platform.qqmusic
 
+import androidx.test.core.app.ApplicationProvider
+import androidx.test.ext.junit.runners.AndroidJUnit4
 import kotlinx.coroutines.runBlocking
 import moe.ouom.neriplayer.platform.qqmusic.api.QQMusicException
 import moe.ouom.neriplayer.platform.qqmusic.api.parseQQCookies
@@ -11,10 +13,17 @@ import okhttp3.ResponseBody.Companion.toResponseBody
 import okio.Buffer
 import org.json.JSONObject
 import org.junit.Assert.*
+import org.junit.Before
 import org.junit.Test
+import org.junit.runner.RunWith
 
+@RunWith(AndroidJUnit4::class)
 class QQMusicQrLoginTest {
     private val png = byteArrayOf(137.toByte(), 80, 78, 71, 13, 10, 26, 10)
+
+    @Before fun initializeAndroidHttp() {
+        OkHttp.initialize(ApplicationProvider.getApplicationContext())
+    }
 
     @Test fun `confirmed QR keeps graph ticket when QQ clears the parent domain cookie`() = runBlocking {
         val calls = mutableListOf<Request>()
