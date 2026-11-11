@@ -40,6 +40,7 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.annotation.Config
+import org.robolectric.annotation.GraphicsMode
 import moe.ouom.neriplayer.R as AppR
 
 @RunWith(AndroidJUnit4::class)
@@ -225,18 +226,34 @@ class NeteaseArtistDetailContentTest {
     }
 
     @Test
+    @GraphicsMode(GraphicsMode.Mode.NATIVE)
     fun `long introduction has an explicit expand button and removes the line limit`() {
-        val biography="A long introduction with several paragraphs. ".repeat(80)+"LAST_PARAGRAPH"
+        // Real font metrics and hard paragraph breaks make this a text-layout regression test.
+        val biography=(1..12).joinToString("\n") {
+            "Paragraph $it: A long introduction with several words and complete sentences."
+        }+"\nLAST_PARAGRAPH"
         setContent { NeteaseArtistDetailUiState(loading=false,header=header.copy(briefDesc=biography)) }
         fun layout(): TextLayoutResult {
             val results=mutableListOf<TextLayoutResult>()
-            composeRule.onNodeWithText(biography).performSemanticsAction(SemanticsActions.GetTextLayoutResult) { it(results) }
+            composeRule.onNodeWithText(biography,useUnmergedTree=true)
+                .performSemanticsAction(SemanticsActions.GetTextLayoutResult) { it(results) }
             return results.single()
         }
-        org.junit.Assert.assertTrue(layout().hasVisualOverflow)
+        val collapsed=layout()
+        assertEquals("The phone biography must start with the three-line limit",3,collapsed.layoutInput.maxLines)
+        org.junit.Assert.assertTrue("Collapsed biography must overflow: lines=${collapsed.lineCount}, " +
+            "width=${collapsed.size.width}, exceeded=${collapsed.multiParagraph.didExceedMaxLines}",collapsed.hasVisualOverflow)
         composeRule.onNodeWithText(string(CoreCommonR.string.action_expand)).assertExists().performClick()
         composeRule.onNodeWithText(string(CoreCommonR.string.action_collapse)).assertExists()
-        org.junit.Assert.assertFalse(layout().hasVisualOverflow)
+        val expanded=layout()
+        assertEquals(Int.MAX_VALUE,expanded.layoutInput.maxLines)
+        assertEquals(biography,expanded.layoutInput.text.text)
+        org.junit.Assert.assertFalse("Expanded biography must retain all paragraphs",expanded.hasVisualOverflow)
+        assertEquals("The final paragraph must remain visible in the text layout",biography.length,
+            expanded.getLineEnd(expanded.lineCount-1,visibleEnd=true))
+        for(line in 0 until expanded.lineCount) {
+            org.junit.Assert.assertFalse("Expanded paragraph must not be ellipsized",expanded.isLineEllipsized(line))
+        }
     }
 
     @Test
