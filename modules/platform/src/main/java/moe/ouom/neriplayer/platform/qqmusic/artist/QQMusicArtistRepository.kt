@@ -99,7 +99,7 @@ internal fun qqArtistAlbum(value: JSONObject, wrapper: JSONObject = value): QQMu
         listOf(value,wrapper).maxOf { album ->
             listOf("totalNum","songNum","song_count","songnum","song_num","total_song_num")
                 .maxOf { album.optInt(it,-1) }
-        })
+        }.takeIf { it>0 } ?: -1)
 }
 
 internal fun validQQCollectionMid(mid: String): Boolean =

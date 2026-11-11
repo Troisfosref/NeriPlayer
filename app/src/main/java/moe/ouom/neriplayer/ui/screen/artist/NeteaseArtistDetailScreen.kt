@@ -176,7 +176,8 @@ internal fun ArtistDetailContent(
     onLoadMoreAlbums: () -> Unit,
     onSongClick: (List<SongItem>, Int) -> Unit,
     onAlbumClick: (AlbumSummary) -> Unit,
-    offlineMode: Boolean
+    offlineMode: Boolean,
+    onAlbumVisible: (AlbumSummary) -> Unit = {}
 ) {
     val miniPlayerHeight = LocalMiniPlayerHeight.current
     val isTabletDevice = LocalConfiguration.current.smallestScreenWidthDp >= 600
@@ -248,7 +249,8 @@ internal fun ArtistDetailContent(
                                 onLoadMoreAlbums = onLoadMoreAlbums,
                                 onSongClick = onSongClick,
                                 onAlbumClick = onAlbumClick,
-                                offlineMode = offlineMode
+                                offlineMode = offlineMode,
+                                onAlbumVisible = onAlbumVisible
                             )
                         }
                     }
@@ -286,6 +288,7 @@ internal fun ArtistDetailContent(
                     onSongClick = onSongClick,
                     onAlbumClick = onAlbumClick,
                     offlineMode = offlineMode,
+                    onAlbumVisible = onAlbumVisible,
                     tabs = {
                         ArtistWorkTabs(selectedTab = selectedTab, onTabSelected = onTabSelected)
                     }
@@ -304,6 +307,7 @@ private fun LazyListScope.artistWorks(
     onSongClick: (List<SongItem>, Int) -> Unit,
     onAlbumClick: (AlbumSummary) -> Unit,
     offlineMode: Boolean,
+    onAlbumVisible: (AlbumSummary) -> Unit,
     tabs: (@Composable () -> Unit)? = null
 ) {
     if (ui.error != null && !ui.loading && (ui.songs.isNotEmpty() || ui.albums.isNotEmpty())) {
@@ -359,6 +363,7 @@ private fun LazyListScope.artistWorks(
             item { EmptyBlock(text = stringResource(CoreCommonR.string.artist_albums_empty)) }
         } else {
             itemsIndexed(ui.albums, key = { _, item -> item.id }) { _, album ->
+                LaunchedEffect(album.id,album.size) { if(album.size<0) onAlbumVisible(album) }
                 ArtistAlbumRow(
                     album = album,
                     onClick = { onAlbumClick(album) },

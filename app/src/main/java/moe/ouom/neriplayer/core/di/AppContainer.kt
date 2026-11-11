@@ -277,6 +277,10 @@ object AppContainer {
         moe.ouom.neriplayer.platform.qqmusic.artist.QQMusicArtistRepository(qqMusicAccounts,
             moe.ouom.neriplayer.platform.qqmusic.api.QQMusicClient(sharedOkHttpClient))
     }
+    val qqMusicAlbumCounts by lazy {
+        moe.ouom.neriplayer.platform.qqmusic.artist.QQMusicAlbumCountRepository(qqMusicAccounts,
+            moe.ouom.neriplayer.platform.qqmusic.api.QQMusicClient(sharedOkHttpClient))
+    }
     val qqMusicArtistCache by lazy {
         moe.ouom.neriplayer.platform.qqmusic.cache.QQMusicArtistCacheRepository(
             moe.ouom.neriplayer.data.local.database.store.PlatformPlaylistCacheRoomStore(

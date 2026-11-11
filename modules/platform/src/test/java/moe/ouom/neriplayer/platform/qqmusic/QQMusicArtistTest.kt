@@ -26,7 +26,7 @@ class QQMusicArtistTest {
         assertEquals(9,qqArtistAlbum(JSONObject("""{"albumMid":"mid","albumName":"Album"}"""),
             JSONObject("""{"totalNum":9}"""))?.count)
         assertEquals(-1,qqArtistAlbum(JSONObject("""{"albumMid":"mid","albumName":"Unknown count"}"""))?.count)
-        assertEquals(0,qqArtistAlbum(album.put("totalNum",0))?.count)
+        assertEquals(-1,qqArtistAlbum(album.put("totalNum",0))?.count)
     }
 
     @Test fun `viewer QQ avatar never overrides the official singer cover`() {
@@ -67,8 +67,10 @@ class QQMusicArtistTest {
         val snapshot=QQMusicArtistSnapshot(QQMusicArtistProfile("mid","Artist",null,null),
             QQMusicArtistPage(listOf(song()),null,1),QQMusicArtistPage(emptyList(),null,0))
         val current=snapshot.artistCacheRecord(500L)
-        Mockito.`when`(store.read("qqmusic","0:artist:mid")).thenReturn(current.copy(signatureSecondary="0"),current)
+        Mockito.`when`(store.read("qqmusic","0:artist:mid")).thenReturn(
+            current.copy(signatureSecondary="0"),current.copy(signatureSecondary="2"),current)
         val cache=QQMusicArtistCacheRepository(store)
+        assertNull(cache.read("mid"))
         assertNull(cache.read("mid"))
         assertEquals(snapshot,cache.read("mid")?.data)
     }

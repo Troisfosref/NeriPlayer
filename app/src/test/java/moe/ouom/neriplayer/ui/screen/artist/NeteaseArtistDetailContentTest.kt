@@ -266,7 +266,22 @@ class NeteaseArtistDetailContentTest {
         composeRule.onNodeWithText(plural(AppR.plurals.count_songs_format,12)).assertExists()
     }
 
-    private fun setContent(ui: () -> NeteaseArtistDetailUiState) {
+    @Test
+    fun `album metadata is requested lazily after opening the album tab`() {
+        val seen=mutableSetOf<Long>()
+        setContent(onAlbumVisible={seen+=it.id}) {
+            NeteaseArtistDetailUiState(loading=false,header=header,songs=songs,
+                albums=(1L..64L).map { AlbumSummary(it,"Album $it","",-1) })
+        }
+        composeRule.runOnIdle { org.junit.Assert.assertTrue(seen.isEmpty()) }
+        composeRule.onNodeWithText(string(CoreCommonR.string.artist_tab_albums)).performClick()
+        composeRule.runOnIdle {
+            org.junit.Assert.assertTrue(seen.isNotEmpty())
+            org.junit.Assert.assertTrue("Off-screen albums must not all trigger a request",seen.size<64)
+        }
+    }
+
+    private fun setContent(onAlbumVisible: (AlbumSummary) -> Unit = {}, ui: () -> NeteaseArtistDetailUiState) {
         composeRule.setContent {
             var selectedTab by remember { mutableIntStateOf(0) }
             MaterialTheme {
@@ -281,7 +296,8 @@ class NeteaseArtistDetailContentTest {
                     onLoadMoreAlbums = { events += "moreAlbums" },
                     onSongClick = { list, index -> events += "song:${list[index].id}/${list.size}" },
                     onAlbumClick = { events += "album:${it.id}" },
-                    offlineMode = false
+                    offlineMode = false,
+                    onAlbumVisible = onAlbumVisible
                 )
             }
         }

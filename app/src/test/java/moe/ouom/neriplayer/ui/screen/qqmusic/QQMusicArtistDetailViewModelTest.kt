@@ -28,6 +28,102 @@ class QQMusicArtistDetailViewModelTest {
     private val cached=QQMusicArtistSnapshot(QQMusicArtistProfile("mid","Artist",null,null,introduction="Full biography"),
         QQMusicArtistPage(listOf(song("first")),1,2),QQMusicArtistPage(listOf(album),1,2))
 
+    @Test fun `only requested unknown albums are resolved and actual counts update both UI and cache`() = runTest {
+        Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+        try {
+            val unknown=cached.copy(albums=cached.albums.copy(items=listOf(album.copy(count=-1),
+                QQMusicPlaylist("album:other","Other",count=-1))))
+            val calls=mutableListOf<String>()
+            val gate=CompletableDeferred<Int>()
+            var saved: QQMusicArtistSnapshot?=null
+            val vm=QQMusicArtistDetailViewModel({error("Fresh cache")},{_,_->error("Fresh cache")},
+                {_,_->error("Fresh cache")},{QQMusicCacheSnapshot(unknown,1_000L)},{saved=it},{2_000L},
+                albumCount={mid->calls+=mid;gate.await()})
+            vm.start(artist);advanceUntilIdle()
+            assertTrue(calls.isEmpty())
+            val row=vm.uiState.value.albums.first()
+            assertEquals(-1,row.size)
+            vm.requestAlbumCount(row);vm.requestAlbumCount(row);runCurrent()
+            assertEquals(listOf("albumMid"),calls)
+            gate.complete(12);advanceUntilIdle()
+            assertEquals(listOf(12,-1),vm.uiState.value.albums.map {it.size})
+            assertEquals(listOf(12,-1),saved?.albums?.items?.map {it.count})
+            assertEquals(12,vm.albumTarget(vm.uiState.value.albums.first())?.count)
+        } finally {Dispatchers.resetMain()}
+    }
+
+    @Test fun `count lookup failure leaves unknown metadata and a manual refresh retries it`() = runTest {
+        Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+        try {
+            val unknown=cached.copy(albums=cached.albums.copy(items=listOf(album.copy(count=-1))))
+            var calls=0;var fail=true
+            val vm=QQMusicArtistDetailViewModel({unknown.profile},{_,_->unknown.songs},{_,_->unknown.albums},
+                {QQMusicCacheSnapshot(unknown,1_000L)},{},{2_000L},
+                albumCount={calls++;if(fail) error("offline") else 15})
+            vm.start(artist);advanceUntilIdle()
+            vm.requestAlbumCount(vm.uiState.value.albums.single());advanceUntilIdle()
+            vm.requestAlbumCount(vm.uiState.value.albums.single());advanceUntilIdle()
+            assertEquals(1,calls);assertEquals(-1,vm.uiState.value.albums.single().size)
+            assertNull(vm.uiState.value.error)
+            fail=false;vm.retry();advanceUntilIdle()
+            assertEquals(2,calls);assertEquals(15,vm.uiState.value.albums.single().size)
+        } finally {Dispatchers.resetMain()}
+    }
+
+    @Test fun `concurrent count completions cannot persist an older incomplete set of counts last`() = runTest {
+        Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+        try {
+            val unknown=cached.copy(albums=cached.albums.copy(items=listOf(album.copy(count=-1),
+                QQMusicPlaylist("album:other","Other",count=-1))))
+            val writing=CompletableDeferred<Unit>()
+            val saved=mutableListOf<QQMusicArtistSnapshot>();var writes=0
+            val vm=QQMusicArtistDetailViewModel({error("Fresh cache")},{_,_->error("Fresh cache")},
+                {_,_->error("Fresh cache")},{QQMusicCacheSnapshot(unknown,1_000L)},
+                {if(++writes==1) writing.await();saved+=it},{2_000L},albumCount={if(it=="albumMid") 9 else 11})
+            vm.start(artist);advanceUntilIdle()
+            vm.uiState.value.albums.forEach(vm::requestAlbumCount);runCurrent()
+            assertEquals(listOf(9,11),vm.uiState.value.albums.map {it.size})
+            writing.complete(Unit);advanceUntilIdle()
+            assertEquals(listOf(9,11),saved.last().albums.items.map {it.count})
+        } finally {Dispatchers.resetMain()}
+    }
+
+    @Test fun `switching artists discards a late album count response`() = runTest {
+        Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+        try {
+            val unknown=cached.copy(albums=cached.albums.copy(items=listOf(album.copy(count=-1))))
+            val gate=CompletableDeferred<Unit>()
+            val vm=QQMusicArtistDetailViewModel({QQMusicArtistProfile("new","New",null,null)},
+                {_,_->unknown.songs},{_,_->QQMusicArtistPage(listOf(QQMusicPlaylist("album:newAlbum","New album",count=-1)),null,1)},
+                {mid->if(mid=="mid") QQMusicCacheSnapshot(unknown,1_000L) else null},{},{2_000L},
+                albumCount={withContext(NonCancellable){gate.await()};12})
+            vm.start(artist);advanceUntilIdle()
+            vm.requestAlbumCount(vm.uiState.value.albums.single());runCurrent()
+            vm.start(QQMusicPlaylist("artist:new","New"));runCurrent()
+            gate.complete(Unit);advanceUntilIdle()
+            assertEquals("New",vm.uiState.value.header?.name)
+            assertEquals("New album",vm.uiState.value.albums.single().name)
+            assertEquals(-1,vm.uiState.value.albums.single().size)
+        } finally {Dispatchers.resetMain()}
+    }
+
+    @Test fun `album pagination does not overwrite a count resolved while the page was loading`() = runTest {
+        Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+        try {
+            val unknown=cached.copy(albums=cached.albums.copy(items=listOf(album.copy(count=-1))))
+            val page=CompletableDeferred<Unit>()
+            val vm=QQMusicArtistDetailViewModel({unknown.profile},{_,_->unknown.songs},
+                {_,_->page.await();QQMusicArtistPage(listOf(QQMusicPlaylist("album:other","Other",count=4)),null,2)},
+                {QQMusicCacheSnapshot(unknown,1_000L)},{},{2_000L},albumCount={12})
+            vm.start(artist);advanceUntilIdle()
+            vm.loadMoreAlbums();runCurrent()
+            vm.requestAlbumCount(vm.uiState.value.albums.single());runCurrent()
+            assertEquals(12,vm.uiState.value.albums.single().size)
+            page.complete(Unit);advanceUntilIdle()
+            assertEquals(listOf(12,4),vm.uiState.value.albums.map {it.size})
+        } finally {Dispatchers.resetMain()}
+    }
+
     @Test fun `fresh cached artist opens without network and album clicks retain the original MID`() = runTest {
         Dispatchers.setMain(StandardTestDispatcher(testScheduler))
         try {

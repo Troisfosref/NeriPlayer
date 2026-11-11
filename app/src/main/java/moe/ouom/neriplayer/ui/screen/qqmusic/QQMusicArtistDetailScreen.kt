@@ -56,7 +56,8 @@ internal fun QQMusicArtistDetailScreen(artist: QQMusicPlaylist, onBack: () -> Un
             ArtistDetailContent(ui=ui,listState=if(selected==0) songsState else albumsState,
                 selectedTab=selected,onTabSelected={selected=it},onRetry=vm::retry,onToggleFollow={},
                 onLoadMoreSongs=vm::loadMoreSongs,onLoadMoreAlbums=vm::loadMoreAlbums,
-                onSongClick=onPlay,onAlbumClick={vm.albumTarget(it)?.let(open)},offlineMode=offlineMode)
+                onSongClick=onPlay,onAlbumClick={vm.albumTarget(it)?.let(open)},offlineMode=offlineMode,
+                onAlbumVisible=vm::requestAlbumCount)
         }
     }
 }

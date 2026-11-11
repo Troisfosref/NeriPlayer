@@ -39,7 +39,7 @@ internal fun QQMusicArtistSnapshot.artistCacheRecord(now: Long): PlatformPlaylis
         totalCount=songs.total,signaturePrimary=albums.total.toString(),signatureSecondary=QQ_ARTIST_CACHE_VERSION)
 }
 
-private const val QQ_ARTIST_CACHE_VERSION = "2"
+private const val QQ_ARTIST_CACHE_VERSION = "3"
 
 internal fun PlatformPlaylistCacheRecord.artistSnapshot(): QQMusicArtistSnapshot {
     val meta=JSONObject(requireNotNull(subtitle))
