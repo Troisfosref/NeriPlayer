@@ -1,0 +1,27 @@
+<resources>
+  <string name="qq_browse_login">请先在设置中登录 QQ 音乐</string>
+  <string name="qq_browse_refresh">刷新</string>
+  <string name="qq_browse_liked">我喜欢的音乐</string>
+  <string name="qq_browse_created">自建歌单</string>
+  <string name="qq_browse_collected">收藏歌单</string>
+  <string name="qq_browse_daily">每日推荐</string>
+  <string name="qq_browse_radio">猜你喜欢</string>
+  <string name="qq_browse_recommended">推荐歌单</string>
+  <string name="qq_browse_more">查看更多</string>
+  <string name="qq_browse_retry">加载失败，点击重试</string>
+  <string name="qq_browse_empty">暂无内容</string>
+  <string name="qq_browse_count">%1$d 首</string>
+  <string name="qq_browse_back">返回</string>
+  <string name="qq_browse_play_all">播放全部</string>
+  <string name="qq_home_visibility">QQ 音乐推荐</string>
+  <string name="qq_home_visibility_desc">显示每日推荐、猜你喜欢和推荐歌单；关闭后停止加载这些栏目</string>
+  <string name="qq_quality_default">QQ 音乐默认音质</string>
+  <string name="qq_quality_mobile">QQ 音乐流量音质</string>
+  <string name="qq_action_failed">操作失败，请重试</string>
+  <string name="qq_add_liked">收藏到 QQ 音乐我喜欢</string>
+  <string name="qq_add_liked_success">已加入 QQ 音乐我喜欢</string>
+  <string name="qq_quality_download">QQ 音乐下载音质</string>
+  <string name="qq_account_signed_in">已登录</string>
+  <string name="qq_account_id">账号：%1$s</string>
+  <string name="qq_account_signed_in_at">登录于 %1$s</string>
+</resources>

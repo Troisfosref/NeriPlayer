@@ -1,5 +1,7 @@
 package moe.ouom.neriplayer.core.player.download.runtime
 
+import moe.ouom.neriplayer.data.model.qqmusic.isQQMusicSong
+
 import moe.ouom.neriplayer.core.download.host.DownloadHosts
 import moe.ouom.neriplayer.platform.youtube.api.auth.normalized
 
@@ -384,6 +386,7 @@ internal suspend fun AudioDownloadManager.resolveDownloadSourceForAttempt(
 ): ResolvedDownloadSource? {
     return sourceResolveSemaphore.withPermit {
         when {
+            song.isQQMusicSong() -> AudioDownloadSourceResolver.resolveQQMusic(song, downloadAudioQuality.qqMusicQuality)
             song.isServerSong() -> AudioDownloadSourceResolver.resolveServer(song)
             isYouTubeMusic -> resolveYouTubeMusic(
                 song = song,

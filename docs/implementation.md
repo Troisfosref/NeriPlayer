@@ -249,3 +249,12 @@ python3 -B tools_pub/quality/module_boundaries.py
 ---
 
 构建发布版与签名流程见 [CONTRIBUTING.md](../CONTRIBUTING.md#构建发布版--release-build)。
+
+## QQ 音乐首期接入
+
+- `platform/qqmusic/api` 维护搜索、歌曲详情、换票、音质降级及 OAuth 协议；协议不回读账号存储。
+- `platform/qqmusic/auth` 用独立加密存储维护 QQ 音乐凭据，扫码会话只存内存。
+- `QQMusicRepository` 注入客户端与账号仓库，串行申请播放票据，不批量探测搜索结果。
+- `QQMusicSongRef` 保存目录 MID、媒体文件 MID 与类型，缓存独立于网易云；长整型 ID 不传给平台接口。
+- 宿主通过 `PlayerRepositoryDependencies` / `DownloadSourceServices` 接入；歌词复用现有 QQ 原生解析。
+- 首期支持范围和验证命令见 [QQ 音乐说明](qq-music.md)。

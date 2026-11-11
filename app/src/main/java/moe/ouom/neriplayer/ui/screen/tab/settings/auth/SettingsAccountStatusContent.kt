@@ -61,6 +61,12 @@ internal fun SettingsLoginExpandedContent(
     highlightPulse: Int = 0,
     onHighlightFinished: (() -> Unit)? = null
 ) {
+    val qqAccount by AppContainer.qqMusicAccounts.state.collectAsStateWithLifecycle()
+    LaunchedEffect(Unit) {
+        try { AppContainer.qqMusicAccounts.load() }
+        catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled }
+        catch (_: Exception) { /* The account panel reports unavailable secure storage. */ }
+    }
     val biliVm = controller.biliVm
     val youtubeVm = controller.youtubeVm
     val neteaseVm = controller.neteaseVm
@@ -90,6 +96,10 @@ internal fun SettingsLoginExpandedContent(
     val youtubeEnabled by AppContainer.settingsRepo.youtubeEnabledFlow.collectAsStateWithLifecycle(
         initialValue = YouTubeFeatureGate.isEnabled()
     )
+    val qqProfile = rememberSettingsAccountProfile(
+        request = SettingsAccountProfileRequest(qqAccount.signedIn, qqAccount.savedAt),
+        isActive = isActive
+    ) { loadQQMusicAccountProfile(qqAccount) }
     val biliProfile = rememberSettingsAccountProfile(
         request = SettingsAccountProfileRequest(bili.hasSavedCookies, bili.health.savedAt, biliAuthorization.identity),
         isActive = isActive
@@ -112,6 +122,14 @@ internal fun SettingsLoginExpandedContent(
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         SettingsAccountCardsContent(
             accounts = listOf(
+                SettingsAccountCardUiState(
+                    platform = SettingsAccountPlatform.QqMusic,
+                    hasSavedAuthorization = qqAccount.signedIn,
+                    authorizationComplete = qqAccount.signedIn,
+                    savedAtLabel = accountSavedAtText(qqAccount.savedAt),
+                    profile = qqProfile.profile,
+                    profileLoading = qqProfile.loading
+                ),
                 SettingsAccountCardUiState(
                     platform = SettingsAccountPlatform.Netease,
                     hasSavedAuthorization = netease.hasSavedCookies,

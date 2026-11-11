@@ -4,6 +4,8 @@ import moe.ouom.neriplayer.data.identity.stableKey
 import moe.ouom.neriplayer.data.model.download.DownloadStage
 import moe.ouom.neriplayer.data.ltw.validation.format
 
+import moe.ouom.neriplayer.data.model.qqmusic.QQMusicSongRef
+import androidx.compose.material.icons.outlined.FavoriteBorder
 import android.content.Intent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -178,6 +180,7 @@ internal fun MoreOptionsMainContent(
                 onEnterAlbum = onEnterAlbum,
                 snackbarHostState = snackbarHostState
             )
+            QQMusicCollectionAction(originalSong, offlineMode || isDismissing, snackbarHostState)
             NeteasePlaylistCollectionAction(
                 owner = viewModel.neteasePlaylistCollection,
                 song = originalSong,
@@ -782,4 +785,27 @@ private fun MoreOptionsItem(
             modifier = Modifier.size(20.dp)
         )
     }
+}
+
+@Composable
+private fun QQMusicCollectionAction(song: SongItem, disabled: Boolean, snackbar: SnackbarHostState) {
+    if (QQMusicSongRef.from(song) == null || song.isLocalSong()) return
+    val scope = rememberCoroutineScope()
+    val resources = LocalResources.current
+    var busy by remember(song.stableKey()) { mutableStateOf(false) }
+    MoreOptionsItem(title=stringResource(CoreCommonR.string.qq_add_liked),
+        icon=Icons.Outlined.FavoriteBorder,hue=MoreHueRed,busy=busy,enabled=!disabled && !busy,
+        onClick={scope.launch {
+            busy=true
+            val message = try {
+                AppContainer.qqMusicRepository.setLiked(song,true)
+                CoreCommonR.string.qq_add_liked_success
+            } catch(c:CancellationException){throw c}
+            catch(error:Exception){
+                if((error as? moe.ouom.neriplayer.platform.qqmusic.api.QQMusicException)?.kind ==
+                    moe.ouom.neriplayer.platform.qqmusic.api.QQMusicException.Kind.LOGIN_REQUIRED)
+                    CoreCommonR.string.qq_music_login_required else CoreCommonR.string.qq_action_failed
+            } finally {busy=false}
+            snackbar.showNeriSnackbar(resources.getString(message))
+        }})
 }

@@ -181,7 +181,7 @@ fun parseNeteaseYrc(yrc: String): List<LyricEntry> {
 //    NPLogger.d("parseYrc-N", yrc)
     val out = mutableListOf<LyricEntry>()
     val headerRegex = Regex("""\[(\d{1,19}),\s*(\d{1,19})]""")
-    val segRegex = Regex("""\((\d{1,19}),\s*(\d{1,19}),\s*[-\d]{1,20}\)([^()\n\r]*)""")
+    val segRegex = Regex("""\((\d{1,19}),\s*(\d{1,19}),\s*[-\d]{1,20}\)(.*?)(?=\(\d{1,19},\s*\d{1,19},\s*[-\d]{1,20}\)|$)""")
 
     yrc.lineSequence().forEach { raw ->
         val line = raw.trim()

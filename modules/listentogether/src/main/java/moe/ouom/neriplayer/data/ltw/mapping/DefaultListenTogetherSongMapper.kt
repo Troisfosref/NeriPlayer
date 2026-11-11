@@ -70,8 +70,14 @@ class DefaultListenTogetherSongMapper(
         else -> toNeteaseSong()
     }
 
+    // QQ is not part of the room protocol yet; keep platform-specific models outside this module.
+    private fun SongItem.isUnsupportedRoomSource(): Boolean {
+        if (isServerSong()) return true
+        return channelId.equals("qqmusic", ignoreCase = true) || mediaUri?.startsWith("qqmusic://") == true
+    }
+
     override fun SongItem.toListenTogetherTrackOrNull(includeLocal: Boolean): ListenTogetherTrack? {
-        if (isServerSong()) return null
+        if (isUnsupportedRoomSource()) return null
         val channel = resolvedChannelId()
         if (channel.equals(ListenTogetherChannels.LOCAL, ignoreCase = true) && !includeLocal) {
             return null

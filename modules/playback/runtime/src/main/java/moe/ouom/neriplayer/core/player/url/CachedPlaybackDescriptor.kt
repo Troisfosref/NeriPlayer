@@ -152,7 +152,8 @@ internal fun CachedPlaybackDescriptor.toPlaybackAudioInfo(
         qualityLabel = qualityKey?.let {
             qualityLabelForCachedSource(source, it, getLocalizedString)
         },
-        qualityOptions = options,
+        qualityOptions = if (source == PlaybackAudioSource.QQ_MUSIC && options.isEmpty())
+            buildQQMusicQualityOptions(getLocalizedString) else options,
         codecLabel = if (source == PlaybackAudioSource.SUBSONIC &&
             mimeType in setOf("audio/mp4", "audio/m4a", "audio/x-m4a")) "M4A" else codecLabel,
         mimeType = mimeType,
@@ -169,6 +170,7 @@ private fun qualityLabelForCachedSource(
     getLocalizedString: (Int) -> String
 ): String {
     return when (source) {
+        PlaybackAudioSource.QQ_MUSIC -> qualityLabelForNetease(key, getLocalizedString)
         PlaybackAudioSource.NETEASE -> qualityLabelForNetease(key, getLocalizedString)
         PlaybackAudioSource.BILIBILI -> qualityLabelForBili(key, getLocalizedString)
         PlaybackAudioSource.YOUTUBE_MUSIC -> qualityLabelForYouTube(key, getLocalizedString)

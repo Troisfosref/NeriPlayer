@@ -199,6 +199,7 @@ internal fun libraryTabDisplayOrder(
         listOf(
             LibraryTab.LOCAL,
             LibraryTab.FAVORITE,
+            LibraryTab.QQMUSIC,
             LibraryTab.YTMUSIC,
             LibraryTab.NETEASE,
             LibraryTab.BILI,
@@ -208,6 +209,7 @@ internal fun libraryTabDisplayOrder(
         listOf(
             LibraryTab.LOCAL,
             LibraryTab.FAVORITE,
+            LibraryTab.QQMUSIC,
             LibraryTab.NETEASE,
             LibraryTab.YTMUSIC,
             LibraryTab.BILI,
@@ -356,6 +358,16 @@ fun LibraryScreen(
         val targetPage = orderedTabs.indexOf(initialTab.asVisibleLibraryTab()).takeIf { it >= 0 } ?: 0
         if (pagerState.currentPage != targetPage) {
             pagerState.scrollToPage(targetPage)
+        }
+    }
+
+    // A fresh QQ list uses the same expanded large title as the local library.
+    LaunchedEffect(pagerState.currentPage, orderedTabs) {
+        if (orderedTabs.getOrNull(pagerState.currentPage) == LibraryTab.QQMUSIC &&
+            qqMusicListState.firstVisibleItemIndex == 0 && qqMusicListState.firstVisibleItemScrollOffset == 0
+        ) {
+            topAppBarState.heightOffset = 0f
+            topAppBarState.contentOffset = 0f
         }
     }
 
@@ -515,8 +527,13 @@ fun LibraryScreen(
                             offlineMode = offlineMode
                         ) }
 
-                        LibraryTab.QQMUSIC -> QqMusicPlaylistList(
-                            listState = qqMusicListState
+                        LibraryTab.QQMUSIC -> moe.ouom.neriplayer.ui.screen.qqmusic.QQMusicLibraryContent(
+                            listState = qqMusicListState,
+                            refreshEnabled = !offlineMode && topAppBarState.collapsedFraction <= 0.01f,
+                            onCategoryChange = {
+                                topAppBarState.heightOffset = 0f
+                                topAppBarState.contentOffset = 0f
+                            }
                         )
                     }
                 }

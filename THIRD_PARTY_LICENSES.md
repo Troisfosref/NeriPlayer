@@ -26,3 +26,16 @@ replace any third-party license.
 超级岛相关改编位于上述 `shizuku/` 与 `service/lyrics/` 目录，具体以文件声明为准。
 NeriPlayer 的 Native 替代授权仅覆盖 [Native 授权说明](modules/native/src/main/cpp/README.md)
 中列出的自有部分，不替代第三方许可证。
+
+## MusicOne QQ music source
+
+QQ request formats, cloud likes, QRC lyric compatibility, media MID filename handling and the QQConnect QR OAuth sequence in
+`modules/platform/src/main/java/moe/ouom/neriplayer/platform/qqmusic/` and
+`modules/platform/src/main/java/moe/ouom/neriplayer/platform/search/api/codec/QQMusicQrcCrypto.kt` are adapted from:
+
+- Project: [HGODLK/MusicOne](https://github.com/HGODLK/MusicOne)
+- Author: ShuyunR / HGODLK
+- Source: `source-packs/qq/src/main/java/com/musicone/source/qq/internal/`
+- License: GNU GPL version 3 or later, [original license](https://github.com/HGODLK/MusicOne/blob/main/LICENSE).
+
+The NeriPlayer integration keeps its own account storage, UI, song identity and playback host interfaces.

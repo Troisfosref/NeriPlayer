@@ -7,6 +7,17 @@ import java.util.Locale
 class DownloadAudioQualitySettingsTest {
 
     @Test
+    fun `QQ download quality follows playback or uses an independent saved value`() {
+        fun selection(follows: Boolean) = resolveDownloadAudioQualitySelection(follows,
+            "exhigh","high","high","standard","low","low",
+            playbackQQMusicQuality="lossless",downloadQQMusicQuality="standard")
+        assertEquals("lossless",selection(true).qqMusicQuality)
+        assertEquals("standard",selection(false).qqMusicQuality)
+        assertEquals("exhigh",normalizeDownloadQQMusicAudioQuality("invalid"))
+        assertEquals("lossless",normalizeDownloadQQMusicAudioQuality(" LOSSLESS "))
+    }
+
+    @Test
     fun `saved Netease qualities retain all supported historical values`() {
         listOf("standard", "higher", "exhigh", "lossless", "hires", "jyeffect", "sky", "jymaster")
             .forEach { quality ->

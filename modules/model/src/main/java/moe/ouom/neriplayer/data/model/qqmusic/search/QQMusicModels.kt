@@ -35,7 +35,8 @@ import kotlinx.serialization.Serializable
  */
 @Serializable data class QQMusicLyricResponse(
     val lyric: String? = null,
-    val trans: String? = null
+    val trans: String? = null,
+    val roma: String? = null
 )
 
 @Serializable data class QQMusicLyricContainer(

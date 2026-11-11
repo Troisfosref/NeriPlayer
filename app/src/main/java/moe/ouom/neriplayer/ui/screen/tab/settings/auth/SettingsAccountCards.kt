@@ -113,7 +113,7 @@ private fun SettingsAccountCard(
     suppressInactiveNavigationSurface: Boolean,
     fallbackColor: Color?
 ) {
-    val supported = account.platform != SettingsAccountPlatform.QqMusic
+    val supported = true
     val key = account.platform.key
     val highlightModifier = if (targetId != null) {
         Modifier.settingsHighlightTarget(targetId, highlightTargetId, highlightPulse, onHighlightFinished)
@@ -196,7 +196,7 @@ private fun SettingsAccountIdentity(
     modifier: Modifier = Modifier
 ) {
     val platformName = stringResource(account.platform.titleRes)
-    val supported = account.platform != SettingsAccountPlatform.QqMusic
+    val supported = true
     Row(
         modifier = modifier.fillMaxWidth().testTag("settingsAccountIdentity:${account.platform.key}"),
         verticalAlignment = Alignment.CenterVertically,
@@ -225,20 +225,30 @@ private fun SettingsAccountIdentity(
                 color = MaterialTheme.colorScheme.onSurface
             )
             if (supported) {
-                Text(
-                    text = account.profile?.nickname ?: stringResource(
-                        when {
-                            account.profileLoading -> CoreCommonR.string.settings_account_profile_loading
-                            account.hasSavedAuthorization -> CoreCommonR.string.settings_account_profile_unavailable
-                            else -> CoreCommonR.string.settings_account_sign_in_hint
-                        }
-                    ),
-                    modifier = Modifier.testTag("settingsAccountNickname:${account.platform.key}"),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis
-                )
+                val nickname = account.profile?.nickname
+                val hint = when {
+                    account.profileLoading -> CoreCommonR.string.settings_account_profile_loading
+                    account.platform == SettingsAccountPlatform.QqMusic && account.hasSavedAuthorization -> null
+                    account.hasSavedAuthorization -> CoreCommonR.string.settings_account_profile_unavailable
+                    else -> CoreCommonR.string.settings_account_sign_in_hint
+                }
+                if (nickname != null || hint != null) {
+                    Text(
+                        text = nickname ?: stringResource(requireNotNull(hint)),
+                        modifier = Modifier.testTag("settingsAccountNickname:${account.platform.key}"),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+                account.profile?.accountId?.let { id ->
+                    Text(
+                        text = stringResource(CoreCommonR.string.qq_account_id, id),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
                 SettingsAccountAuthorization(account)
             } else {
                 Text(
@@ -268,8 +278,11 @@ private fun SettingsAccountAuthorization(account: SettingsAccountCardUiState) {
         )
         Text(
             text = stringResource(
-                if (account.hasSavedAuthorization) CoreCommonR.string.settings_account_authorization_saved
-                else CoreCommonR.string.settings_account_authorization_missing
+                when {
+                    account.hasSavedAuthorization && account.platform == SettingsAccountPlatform.QqMusic -> CoreCommonR.string.qq_account_signed_in
+                    account.hasSavedAuthorization -> CoreCommonR.string.settings_account_authorization_saved
+                    else -> CoreCommonR.string.settings_account_authorization_missing
+                }
             ),
             modifier = Modifier.testTag("settingsAccountAuthorization:${account.platform.key}"),
             style = MaterialTheme.typography.labelMedium,
@@ -280,7 +293,10 @@ private fun SettingsAccountAuthorization(account: SettingsAccountCardUiState) {
         val detail = if (!account.authorizationComplete) {
             stringResource(CoreCommonR.string.settings_account_authorization_incomplete)
         } else account.savedAtLabel?.let {
-            stringResource(CoreCommonR.string.settings_account_last_updated, it)
+            stringResource(
+                if (account.platform == SettingsAccountPlatform.QqMusic) CoreCommonR.string.qq_account_signed_in_at
+                else CoreCommonR.string.settings_account_last_updated, it
+            )
         }
         if (detail != null) {
             Text(

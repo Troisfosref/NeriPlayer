@@ -1,5 +1,7 @@
 package moe.ouom.neriplayer.core.player.metadata
 
+import moe.ouom.neriplayer.data.model.qqmusic.isQQMusicSong
+
 import moe.ouom.neriplayer.data.model.server.isServerSong
 
 /*
@@ -167,17 +169,6 @@ fun resolveLyricTextForPlayback(
             downloadedLyric = downloadedLyric
         )
     }
-}
-
-internal fun shouldLoadRemoteLyrics(song: SongItem): Boolean {
-    return !song.isLocalSong() && !song.isServerSong()
-}
-
-fun shouldReadManagedDownloadLyrics(
-    song: SongItem,
-    isManagedLocalDownload: Boolean
-): Boolean {
-    return !song.isLocalSong() || isManagedLocalDownload
 }
 
 private fun isManagedLocalLyricsSourceForSong(application: Application, song: SongItem): Boolean {
@@ -966,6 +957,7 @@ object PlayerLyricsProvider {
                 NPLogger.w("NERI-PlayerManager", "已忽略下载的 YouTube 全零翻译时间轴: ${song.name}")
             }
 
+            if (song.isQQMusicSong()) return@withContext loadQQMusicLyrics(song, translated = true)
             if (!shouldLoadRemoteLyrics(song)) {
                 return@withContext emptyList()
             }
@@ -1115,7 +1107,8 @@ object PlayerLyricsProvider {
                 val cachedAmll = amllLyricsCache.get(buildAmllLyricsCacheKey(song, requireDurationMatch = false))
                 cachedAmll?.romanizedLyrics?.takeIf { it.isNotEmpty() }?.let { return@withContext it }
             }
-            loadNeteaseRomanizedFallback(song, preferWordTimedLyrics, editableLyricsMatcher, neteaseClient, neteaseLyricsCache)
+            if (song.isQQMusicSong()) loadQQMusicLyrics(song, preferWordTimed = preferWordTimedLyrics, romanized = true) else
+                loadNeteaseRomanizedFallback(song, preferWordTimedLyrics, editableLyricsMatcher, neteaseClient, neteaseLyricsCache)
         }
     }
 
@@ -1234,6 +1227,7 @@ object PlayerLyricsProvider {
                     return@withContext entries
                 }
             }
+            if (song.isQQMusicSong()) return@withContext loadQQMusicLyrics(song, preferWordTimed = preferWordTimedLyrics)
             if (song.isServerSong()) {
                 // Server failures must reach the existing lyric load owner, not look like no lyrics.
                 return@withContext PlayerDependencies.repositories.subsonicRepository?.lyrics(song).orEmpty()

@@ -13,6 +13,7 @@ import moe.ouom.neriplayer.core.player.media.PlaybackMediaItemFactory
 import moe.ouom.neriplayer.data.identity.stableKey
 import moe.ouom.neriplayer.data.local.media.LocalSongSupport
 import moe.ouom.neriplayer.data.model.SongItem
+import moe.ouom.neriplayer.data.model.qqmusic.QQMusicSongRef
 import moe.ouom.neriplayer.data.model.storage.ExtraCacheClearResult
 import moe.ouom.neriplayer.platform.youtube.api.transport.extractYouTubeMusicVideoId
 import org.json.JSONArray
@@ -116,7 +117,9 @@ private class AudioStorageCacheRetention(
 
 private fun legacySongCachePrefixes(song: SongItem): List<String> {
     if (LocalSongSupport.isLocalSong(song)) return emptyList()
+    val qqRef = QQMusicSongRef.from(song)
     val sourcePrefixes = when {
+        qqRef != null -> listOf("qqmusic:${qqRef.mid}:")
         PlaybackMediaItemFactory.isYouTubeSource(song) -> {
             val id = song.audioId ?: extractYouTubeMusicVideoId(song.mediaUri)
             listOfNotNull(id?.takeIf(String::isNotBlank)?.let { "ytmusic-$it-" })
@@ -134,6 +137,6 @@ private fun legacySongCachePrefixes(song: SongItem): List<String> {
 }
 
 private fun isRecognizedSongCacheKey(key: String): Boolean =
-    key.startsWith("netease-") || key.startsWith("ytmusic-") ||
+    key.startsWith("netease-") || key.startsWith("ytmusic-") || key.startsWith("qqmusic:") ||
         (key.startsWith("bili-") && !key.startsWith("bili-auto-")) ||
         key.startsWith("listen-together-stream-")

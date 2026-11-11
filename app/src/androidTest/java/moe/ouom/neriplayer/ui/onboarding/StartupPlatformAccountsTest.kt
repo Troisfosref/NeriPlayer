@@ -104,9 +104,7 @@ class StartupPlatformAccountsTest {
             composeRule.onNodeWithTag("settingsAccountCard:netease").performScrollTo().performClick()
             composeRule.onNodeWithTag("settingsAccountLogin:netease").performScrollTo().performClick()
             composeRule.onNodeWithTag("settingsAccountLogout:bilibili").performScrollTo().performClick()
-            composeRule.onNodeWithTag("settingsAccountCard:qq", true).performScrollTo()
-                .assert(SemanticsMatcher.keyNotDefined(SemanticsActions.OnClick))
-            composeRule.onNodeWithTag("settingsAccountLogin:qq").assertDoesNotExist()
+            composeRule.onNodeWithTag("settingsAccountLogin:qq").performScrollTo().assertIsDisplayed()
             composeRule.onNodeWithTag("settingsAccountLogout:qq").assertDoesNotExist()
             composeRule.onNodeWithTag(NEXT).assertIsDisplayed()
             composeRule.runOnIdle {

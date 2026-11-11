@@ -18,8 +18,34 @@ import org.junit.Assert.assertSame
 import org.junit.Assert.fail
 import org.junit.Test
 import java.io.IOException
+import moe.ouom.neriplayer.platform.qqmusic.QQMusicProfile
+import moe.ouom.neriplayer.platform.qqmusic.auth.QQMusicAccountState
+import moe.ouom.neriplayer.ui.screen.tab.settings.auth.loadQQMusicAccountProfileIfCurrent
 
 class SettingsAccountProfilesTest {
+    @Test
+    fun `QQ current profile exposes nickname avatar and account id without changing login`() = runTest {
+        val account = QQMusicAccountState(true, 12L)
+        val profile = loadQQMusicAccountProfileIfCurrent(account, { account }) {
+            QQMusicProfile("42", " Fixture ", "//example.invalid/avatar.png")
+        }
+        assertEquals(SettingsAccountProfile("Fixture", "https://example.invalid/avatar.png", "42"), profile)
+    }
+
+    @Test
+    fun `QQ sign out or account replacement discards stale profile responses`() = runTest {
+        val account = QQMusicAccountState(true, 12L)
+        var current = account
+        assertNull(loadQQMusicAccountProfileIfCurrent(account, { current }) {
+            current = QQMusicAccountState()
+            QQMusicProfile("42", "Old account", null)
+        })
+        assertNull(loadQQMusicAccountProfileIfCurrent(account, { account.copy(savedAt = 13L) }) {
+            fail("A stale account must not start another profile request")
+            QQMusicProfile("42", "Old account", null)
+        })
+    }
+
     @Test
     fun `youtube snapshot copies authorization and includes selected account and saved generation`() {
         val cookies = linkedMapOf("SAPISID" to "synthetic-first", "SID" to "synthetic-first")

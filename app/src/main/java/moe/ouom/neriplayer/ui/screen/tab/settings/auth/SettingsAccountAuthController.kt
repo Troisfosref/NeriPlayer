@@ -28,6 +28,7 @@ internal class SettingsAuthDialogState(
     val neteaseTab: MutableIntState,
     val youtubeTab: MutableIntState
 ) {
+    var showQQMusicSheet by mutableStateOf(false)
     var showNeteaseSheet by mutableStateOf(false)
     var showNeteaseSavedCookieDialog by mutableStateOf(false)
     var showNeteaseConfirmDialog by mutableStateOf(false)
@@ -153,13 +154,13 @@ internal class SettingsAccountAuthController(
     }
 }
 
-internal class SettingsAccountAuthActions(controller: SettingsAccountAuthController) {
+internal class SettingsAccountAuthActions(private val controller: SettingsAccountAuthController) {
     fun openPlatformLogin(platform: SettingsAccountPlatform) {
         when (platform) {
             SettingsAccountPlatform.Netease -> openNeteaseSheet()
             SettingsAccountPlatform.Bilibili -> openBiliSheet()
             SettingsAccountPlatform.YouTube -> openYouTubeSheet()
-            SettingsAccountPlatform.QqMusic -> Unit
+            SettingsAccountPlatform.QqMusic -> { controller.dialogs.showQQMusicSheet = true }
         }
     }
 
@@ -168,7 +169,7 @@ internal class SettingsAccountAuthActions(controller: SettingsAccountAuthControl
             SettingsAccountPlatform.Netease -> openNeteaseSavedCookieDialog()
             SettingsAccountPlatform.Bilibili -> openBiliSavedCookieDialog()
             SettingsAccountPlatform.YouTube -> openYouTubeSavedCookieDialog()
-            SettingsAccountPlatform.QqMusic -> Unit
+            SettingsAccountPlatform.QqMusic -> { controller.dialogs.showQQMusicSheet = true }
         }
     }
 
@@ -238,6 +239,9 @@ internal fun SettingsAccountAuthDialogs(
     inlineMessage: UiText?,
     onInlineMessageChange: (UiText?) -> Unit
 ) {
+    if (controller.dialogs.showQQMusicSheet) {
+        QQMusicAccountDialog { controller.dialogs.showQQMusicSheet = false }
+    }
     SettingsNeteaseAccountAuthDialogs(controller, inlineMessage, onInlineMessageChange)
     SettingsBiliAccountAuthDialogs(controller, inlineMessage, onInlineMessageChange)
     SettingsYouTubeAccountAuthDialogs(controller, inlineMessage, onInlineMessageChange)

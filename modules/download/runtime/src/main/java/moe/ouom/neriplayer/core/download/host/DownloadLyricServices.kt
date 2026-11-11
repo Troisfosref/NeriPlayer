@@ -5,6 +5,7 @@ import moe.ouom.neriplayer.platform.youtube.api.client.YouTubeMusicClient
 import moe.ouom.neriplayer.platform.lyrics.repository.LrcLibLyricsRepository
 
 interface DownloadLyricServices {
+    val qqMusicSearchApi: moe.ouom.neriplayer.platform.lyrics.repository.QQMusicLyricsRepository? get() = null
     val neteaseClient: NeteaseClient
     val youtubeMusicClient: YouTubeMusicClient
     val lrcLibClient: LrcLibLyricsRepository

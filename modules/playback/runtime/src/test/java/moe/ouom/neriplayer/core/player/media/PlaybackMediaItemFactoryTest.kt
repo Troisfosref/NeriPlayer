@@ -4,6 +4,7 @@ import android.content.Context
 import android.net.Uri
 import moe.ouom.neriplayer.core.player.PlayerManager
 import moe.ouom.neriplayer.data.model.SongItem
+import moe.ouom.neriplayer.data.model.qqmusic.QQMusicSongRef
 import moe.ouom.neriplayer.data.model.ltw.track.ListenTogetherChannels
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -15,6 +16,34 @@ import org.mockito.Mockito.mockStatic
 
 class PlaybackMediaItemFactoryTest {
     private val context = mock(Context::class.java)
+
+    @Test
+    fun `downloaded QQ files use local cache identity without requesting a remote quality`() {
+        val ref = QQMusicSongRef("fixtureMid", "actualFile")
+        val downloaded = song(id=ref.numericId,channelId=QQMusicSongRef.CHANNEL,
+            audioId=ref.mid,mediaUri=ref.mediaUri).copy(localFilePath="/storage/emulated/0/song.flac")
+        val result = PlaybackMediaItemFactory.cacheKey(downloaded,context,null,false,
+            {error("No remote preference")},{error("No remote preference")},
+            {error("No remote preference")},{error("No remote preference")},{error("No remote preference")})
+        assertTrue(result.startsWith("local-"))
+    }
+
+    @Test
+    fun `QQ cache separates catalog identity and requested quality without reading other source preferences`() {
+        val ref = QQMusicSongRef("fixtureMid", "actualFile")
+        val qq = song(id = ref.numericId, channelId = QQMusicSongRef.CHANNEL,
+            audioId = ref.mid, mediaUri = ref.mediaUri)
+        fun qqKey(quality: String) = PlaybackMediaItemFactory.cacheKey(
+            song = qq, context = context, youtubeQualityOverride = null,
+            youtubePreferM4a = false, neteaseFallbackEnabled = { error("Not a NetEase source") },
+            youtubeQuality = { error("Not a YouTube source") },
+            biliQuality = { error("Not a Bilibili source") },
+            neteaseQuality = { error("Not a NetEase source") }, qqMusicQuality = { quality }
+        )
+        assertEquals("qqmusic:fixtureMid:LOSSLESS:v1", qqKey("LOSSLESS"))
+        assertEquals("qqmusic:fixtureMid:STANDARD:v1", qqKey("STANDARD"))
+        assertFalse(qqKey("STANDARD").startsWith("netease-"))
+    }
 
     @Test
     fun `PlayerManager source predicates retain media owner classification`() {

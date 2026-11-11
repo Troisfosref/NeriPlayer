@@ -69,19 +69,23 @@ fun resolveDownloadAudioQualitySelection(
     playbackBiliQuality: String?,
     downloadNeteaseQuality: String?,
     downloadYouTubeQuality: String?,
-    downloadBiliQuality: String?
+    downloadBiliQuality: String?,
+    playbackQQMusicQuality: String? = null,
+    downloadQQMusicQuality: String? = null
 ): DownloadAudioQualitySelection {
     return if (followsPlaybackQuality) {
         DownloadAudioQualitySelection.normalized(
             neteaseQuality = playbackNeteaseQuality,
             youtubeQuality = playbackYouTubeQuality,
-            biliQuality = playbackBiliQuality
+            biliQuality = playbackBiliQuality,
+            qqMusicQuality = playbackQQMusicQuality
         )
     } else {
         DownloadAudioQualitySelection.normalized(
             neteaseQuality = downloadNeteaseQuality,
             youtubeQuality = downloadYouTubeQuality,
-            biliQuality = downloadBiliQuality
+            biliQuality = downloadBiliQuality,
+            qqMusicQuality = downloadQQMusicQuality
         )
     }
 }
@@ -107,7 +111,8 @@ suspend fun resolveDownloadAudioQualitySelection(
             ),
             downloadBiliQuality = preferences.valueOf(
                 AutoSettingsSchema.download.downloadBiliAudioQuality
-            )
+            ),
+            downloadQQMusicQuality = preferences.valueOf(AutoSettingsSchema.download.downloadQQMusicAudioQuality)
         )
     }.getOrElse {
         DownloadAudioQualitySelection.normalized(
@@ -148,11 +153,16 @@ fun updateDownloadFollowPlaybackAudioQualityStartupValue(
 fun DownloadAudioQualitySelection.Companion.normalized(
     neteaseQuality: String?,
     youtubeQuality: String?,
-    biliQuality: String?
+    biliQuality: String?,
+    qqMusicQuality: String? = null
 ): DownloadAudioQualitySelection {
     return DownloadAudioQualitySelection(
         neteaseQuality = normalizeDownloadNeteaseAudioQuality(neteaseQuality),
         youtubeQuality = normalizeDownloadYouTubeAudioQuality(youtubeQuality),
-        biliQuality = normalizeDownloadBiliAudioQuality(biliQuality)
+        biliQuality = normalizeDownloadBiliAudioQuality(biliQuality),
+        qqMusicQuality = qqMusicQuality?.let(::normalizeDownloadQQMusicAudioQuality)
     )
 }
+
+fun normalizeDownloadQQMusicAudioQuality(value: String?): String =
+    value?.trim()?.lowercase()?.takeIf { it in setOf("standard", "exhigh", "lossless") } ?: "exhigh"

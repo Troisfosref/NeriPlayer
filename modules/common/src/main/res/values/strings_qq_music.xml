@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="qq_music_scan_hint">使用手机 QQ 扫描二维码并确认登录</string>
+    <string name="qq_music_confirm_hint">已扫码，请在 QQ 中确认登录</string>
+    <string name="qq_music_qr_expired">二维码已过期或登录已取消，请刷新</string>
+    <string name="qq_music_refresh_qr">刷新二维码</string>
+    <string name="qq_music_cookie_hint">粘贴 QQ 音乐 Cookie</string>
+    <string name="qq_music_import_cookie">导入登录状态</string>
+    <string name="qq_music_cookie_invalid">Cookie 需要包含音乐账号和音乐登录凭据</string>
+    <string name="qq_music_preferred_quality">QQ 音乐首选音质</string>
+    <string name="qq_music_search_hint">搜索 QQ 音乐歌曲，或在设置中登录 QQ 音乐</string>
+    <string name="qq_music_login_required">QQ 音乐登录已失效，请重新登录</string>
+    <string name="qq_music_unavailable">QQ 音乐未返回可播放的完整音源</string>
+    <string name="qq_music_verification_required">QQ 音乐需要安全验证，请在官方客户端完成后重新登录</string>
+    <string name="qq_music_request_failed">QQ 音乐请求失败，请稍后重试</string>
+    <string name="qq_music_storage_failed">无法读取或保存 QQ 音乐登录状态</string>
+</resources>

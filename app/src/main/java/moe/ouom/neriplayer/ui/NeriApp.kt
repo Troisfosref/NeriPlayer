@@ -465,6 +465,7 @@ private fun NeriAppContent(
     val showLyricTranslation by repo.showLyricTranslationFlow.collectAsStateWithLifecycle(initialValue = true)
     val defaultStartDestination: String? by repo.defaultStartDestinationFlow
         .collectAsStateWithLifecycle(initialValue = null)
+    val showHomeQqMusic by repo.homeCardQqMusicFlow.collectAsStateWithLifecycle(initialValue = true)
     val showHomeContinueCard by repo.homeCardContinueFlow.collectAsStateWithLifecycle(initialValue = true)
     val showHomeTrendingCard by repo.homeCardTrendingFlow.collectAsStateWithLifecycle(initialValue = true)
     val showHomeRadarCard by repo.homeCardRadarFlow.collectAsStateWithLifecycle(initialValue = true)
@@ -496,7 +497,7 @@ private fun NeriAppContent(
             showHomeTrendingCard ||
             showHomeRadarCard ||
             showHomeRecommendedCard ||
-            showHomeBilibiliCard
+            showHomeBilibiliCard || showHomeQqMusic
     var pendingFollowSystemDark by remember { mutableStateOf<Boolean?>(null) }
     var pendingForceDark by remember { mutableStateOf<Boolean?>(null) }
     var themeRevealSnapshot by remember { mutableStateOf<ImageBitmap?>(null) }
@@ -1679,6 +1680,9 @@ private fun NeriAppContent(
             )
 
             CompositionLocalProvider(
+                moe.ouom.neriplayer.ui.screen.qqmusic.LocalQQPlaylistOpen provides { playlist ->
+                    navController.navigate(moe.ouom.neriplayer.ui.screen.qqmusic.qqPlaylistRoute(playlist))
+                },
                 LocalSharedCoverFlight provides sharedCoverFlight,
                 LocalHasCustomBackground provides hasCustomBackground,
                 LocalPredictiveBackPreviewEnabled provides predictiveBackPreviewEnabled

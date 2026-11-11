@@ -98,3 +98,6 @@ fun resolveLegacyMobileDataBiliAudioQuality(value: String?): String? {
         else -> null
     }
 }
+
+fun normalizeMobileDataQQMusicAudioQuality(value: String?): String =
+    value?.trim()?.lowercase()?.takeIf { it in setOf("standard", "exhigh", "lossless") } ?: "standard"

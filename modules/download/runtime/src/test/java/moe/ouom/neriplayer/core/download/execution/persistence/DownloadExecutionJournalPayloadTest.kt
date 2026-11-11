@@ -39,6 +39,17 @@ class DownloadExecutionJournalPayloadTest {
     }
 
     @Test
+    fun `explicit QQ download quality survives operation journal restoration`() = runTest {
+        val request=routedRequest(song()).copy(downloadAudioQuality=
+            DownloadAudioQualitySelection("exhigh","high","high",qqMusicQuality=" LOSSLESS "))
+        val header=header(operationId=request.operationId,stableKey=request.song.stableKey())
+        val dao=mock(DownloadOperationDao::class.java)
+        stubSourceHint(dao,header,DownloadExecutionRoomStore.requestToJson(request).toString())
+        val restored=checkNotNull(DownloadExecutionRoomStore.readRequestFromHeader(dao,header).request)
+        assertEquals("lossless",restored.downloadAudioQuality?.qqMusicQuality)
+    }
+
+    @Test
     fun `convergence priority ranks post core work ahead of transfer work`() {
         val states = listOf(
             "DEGRADED_COMPLETE",

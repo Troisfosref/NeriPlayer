@@ -2,6 +2,8 @@
 
 package moe.ouom.neriplayer.core.player.url
 
+import moe.ouom.neriplayer.data.model.qqmusic.isQQMusicSong
+
 import moe.ouom.neriplayer.data.model.server.isServerSong
 
 import moe.ouom.neriplayer.core.player.host.PlayerDependencies
@@ -103,6 +105,16 @@ internal suspend fun PlayerManager.resolveSongUrl(
     playbackRequestTokenOverride: Long? = null,
     shouldApplyCacheMutation: () -> Boolean = { true }
 ): SongUrlResult {
+    if (song.isQQMusicSong() && !isLocalSong(song)) {
+        try {
+            PlayerDependencies.repositories.qqMusicRepository?.accounts?.let { accounts ->
+                accounts.load()
+                qqMusicPreferredQuality = accounts.preferredQuality.name.lowercase()
+            }
+        }
+        catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled }
+        catch (_: Exception) { /* Complete audio caches remain usable without account storage. */ }
+    }
     val serverSong = song.isServerSong()
     logSongUrlResolutionRequest(
         song, forceRefresh, _currentMediaUrl.value,
@@ -183,7 +195,7 @@ internal suspend fun PlayerManager.resolveSongUrl(
         )
     }
     if (
-        !serverSong && shouldUseDirectStreamShortcut(
+        !serverSong && !song.isQQMusicSong() && shouldUseDirectStreamShortcut(
             forceRefresh = forceRefresh,
             hasListenTogetherFallback = initialListenTogetherFallback != null
         ) && isDirectStreamUrl(song.streamUrl)
@@ -306,6 +318,7 @@ internal suspend fun PlayerManager.resolveSongUrl(
             initialListenTogetherFallback != null ||
             suppressListenTogetherResolverErrors
         when {
+            song.isQQMusicSong() -> getQQMusicAudioUrl(song, resolverSideEffects, suppressError)
             isYouTubeTrack -> getYouTubeMusicAudioUrl(
                 song = song,
                 suppressError = suppressError,

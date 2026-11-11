@@ -7,6 +7,7 @@ import moe.ouom.neriplayer.platform.youtube.repository.YouTubeMusicPlaybackRepos
 import moe.ouom.neriplayer.platform.subsonic.repository.SubsonicRepository
 
 interface DownloadSourceServices {
+    val qqMusicRepository: moe.ouom.neriplayer.platform.qqmusic.QQMusicRepository? get() = null
     val subsonicRepository: SubsonicRepository? get() = null
     val neteaseClient: NeteaseClient
     val biliClient: BiliClient

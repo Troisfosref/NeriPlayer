@@ -37,6 +37,14 @@ class CachedPlaybackDescriptorTest {
     }
 
     @Test
+    fun `legacy QQ cached descriptors restore the native quality picker`() {
+        val info=PlaybackAudioInfo(source=PlaybackAudioSource.QQ_MUSIC,qualityKey="exhigh",mimeType="audio/mpeg")
+        val restored=requireNotNull(cachedPlaybackDescriptorFromAudioInfo(info,null).toPlaybackAudioInfo { "label-$it" })
+        assertEquals(listOf("standard","exhigh","lossless"),restored.qualityOptions.map { it.key })
+        assertEquals("exhigh",restored.qualityKey)
+    }
+
+    @Test
     fun `descriptor round trip restores actual quality and mime`() {
         val audioInfo = PlaybackAudioInfo(
             source = PlaybackAudioSource.BILIBILI,

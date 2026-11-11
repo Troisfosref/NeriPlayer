@@ -2,6 +2,8 @@
 
 package moe.ouom.neriplayer.core.player.media
 
+import moe.ouom.neriplayer.data.model.qqmusic.QQMusicSongRef
+
 import moe.ouom.neriplayer.data.model.server.ServerSongRef
 
 import moe.ouom.neriplayer.data.identity.stableKey
@@ -31,10 +33,12 @@ internal object PlaybackMediaItemFactory {
         neteaseFallbackEnabled: () -> Boolean,
         youtubeQuality: () -> String,
         biliQuality: () -> String,
-        neteaseQuality: () -> String
+        neteaseQuality: () -> String,
+        qqMusicQuality: () -> String = { "EXHIGH" }
     ): String {
         ServerSongRef.from(song)?.let { return it.cacheKey }
         if (LocalSongSupport.isLocalSong(song, context)) return "local-${song.stableKey().hashCode()}"
+        QQMusicSongRef.from(song)?.let { return "qqmusic:${it.mid}:${qqMusicQuality()}:v1" }
         if (isYouTubeSource(song)) {
             return youtubeSongCacheKey(song, youtubeQualityOverride, youtubePreferM4a, youtubeQuality)
         }

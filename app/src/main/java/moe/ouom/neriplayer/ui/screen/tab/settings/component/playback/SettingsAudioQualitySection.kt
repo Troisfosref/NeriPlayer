@@ -185,6 +185,8 @@ internal fun SettingsAudioQualitySection(
                 onHighlightFinished = onHighlightFinished
             )
 
+            moe.ouom.neriplayer.ui.screen.qqmusic.QQAudioQualitySetting()
+
             AutoSettingsListItem(
                 setting = AutoSettingsMetadata.requireSetting(
                     AutoSettingsKeys.MOBILE_DATA_FOLLOW_DEFAULT_AUDIO_QUALITY
@@ -261,6 +263,7 @@ internal fun SettingsAudioQualitySection(
                     highlightPulse = highlightPulse,
                     onHighlightFinished = onHighlightFinished
                 )
+                moe.ouom.neriplayer.ui.screen.qqmusic.QQAudioQualitySetting(mobileData = true)
             }
         }
     }
