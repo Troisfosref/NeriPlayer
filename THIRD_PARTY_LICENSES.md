@@ -29,7 +29,7 @@ NeriPlayer 的 Native 替代授权仅覆盖 [Native 授权说明](modules/native
 
 ## MusicOne QQ music source
 
-QQ request formats, cloud likes, QRC lyric compatibility, media MID filename handling and the QQConnect QR OAuth sequence in
+QQ request formats, categorized search, album/artist track lists, cloud likes, QRC lyric compatibility, media MID filename handling and the QQConnect QR OAuth sequence in
 `modules/platform/src/main/java/moe/ouom/neriplayer/platform/qqmusic/` and
 `modules/platform/src/main/java/moe/ouom/neriplayer/platform/search/api/codec/QQMusicQrcCrypto.kt` are adapted from:
 

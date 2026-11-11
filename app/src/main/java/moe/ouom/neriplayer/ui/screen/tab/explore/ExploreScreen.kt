@@ -35,6 +35,7 @@ import moe.ouom.neriplayer.ui.theme.NeriDesign
 import moe.ouom.neriplayer.ui.screen.playlist.FavoriteSongLookup
 import moe.ouom.neriplayer.data.identity.stableKey
 import moe.ouom.neriplayer.data.sync.mapping.toSongItem
+import moe.ouom.neriplayer.platform.qqmusic.QQMusicSearchType
 import android.app.Application
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
@@ -242,11 +243,13 @@ internal fun exploreSearchScrollContextKey(
     keyword: String,
     source: SearchSource,
     neteaseSearchType: NeteaseExploreSearchType,
-    youtubeSearchType: YouTubeExploreSearchType = YouTubeExploreSearchType.SONG
+    youtubeSearchType: YouTubeExploreSearchType = YouTubeExploreSearchType.SONG,
+    qqMusicSearchType: QQMusicSearchType = QQMusicSearchType.SONG
 ): String? {
     val normalizedKeyword = keyword.trim()
     if (normalizedKeyword.isBlank()) return null
     val sourceType = when (source) {
+        SearchSource.QQ_MUSIC -> qqMusicSearchType.name
         SearchSource.NETEASE -> neteaseSearchType.name
         SearchSource.YOUTUBE_MUSIC -> youtubeSearchType.name
         else -> "-"
@@ -602,7 +605,8 @@ fun ExploreScreen(
         searchHistoryEnabled,
         ui.selectedSearchSource,
         ui.selectedNeteaseSearchType,
-        ui.selectedYouTubeMusicSearchType
+        ui.selectedYouTubeMusicSearchType,
+        ui.selectedQQMusicSearchType
     ) {
         if (searchQuery.isBlank()) {
             lastRecordedSearchKeyword = null
@@ -631,13 +635,15 @@ fun ExploreScreen(
         effectiveSearchKeyword,
         ui.selectedSearchSource,
         ui.selectedNeteaseSearchType,
-        ui.selectedYouTubeMusicSearchType
+        ui.selectedYouTubeMusicSearchType,
+        ui.selectedQQMusicSearchType
     ) {
         exploreSearchScrollContextKey(
             keyword = effectiveSearchKeyword,
             source = ui.selectedSearchSource,
             neteaseSearchType = ui.selectedNeteaseSearchType,
-            youtubeSearchType = ui.selectedYouTubeMusicSearchType
+            youtubeSearchType = ui.selectedYouTubeMusicSearchType,
+            qqMusicSearchType = ui.selectedQQMusicSearchType
         )
     }
 
@@ -663,7 +669,8 @@ fun ExploreScreen(
         ui.searchItems.size,
         ui.selectedSearchSource,
         ui.selectedNeteaseSearchType,
-        ui.selectedYouTubeMusicSearchType
+        ui.selectedYouTubeMusicSearchType,
+        ui.selectedQQMusicSearchType
     ) {
         if (shouldLoadMoreSearch) {
             vm.loadMoreSearchResults()
@@ -904,6 +911,8 @@ fun ExploreScreen(
                         selectedYouTubeSearchType = ui.selectedYouTubeMusicSearchType,
                         onNeteaseSearchTypeClick = vm::setNeteaseSearchType,
                         onYouTubeSearchTypeClick = vm::setYouTubeMusicSearchType,
+                        selectedQQMusicSearchType = ui.selectedQQMusicSearchType,
+                        onQQMusicSearchTypeClick = vm::setQQMusicSearchType,
                         selectedAlpha = tagChipSelectedAlpha,
                         unselectedAlpha = tagChipUnselectedAlpha,
                         borderAlpha = tagChipBorderAlpha
@@ -1065,6 +1074,9 @@ fun ExploreScreen(
                                                     }
                                                 )
                                             )
+                                        }
+                                        is ExploreSearchResult.QQCollection -> {
+                                            QQMusicCollectionSearchRow(item.collection, offlineMode)
                                         }
                                         is ExploreSearchResult.Playlist -> {
                                             NeteasePlaylistSearchRow(
@@ -1627,7 +1639,7 @@ internal fun exploreSearchTypeBarSource(
 ): SearchSource? {
     if (contentScrolled) return null
     return selectedSearchSource.takeIf {
-        it == SearchSource.NETEASE || it == SearchSource.YOUTUBE_MUSIC
+        it == SearchSource.NETEASE || it == SearchSource.YOUTUBE_MUSIC || it == SearchSource.QQ_MUSIC
     }
 }
 
@@ -1650,7 +1662,9 @@ internal fun ExploreSearchTypeBar(
     onYouTubeSearchTypeClick: (YouTubeExploreSearchType) -> Unit,
     selectedAlpha: Float,
     unselectedAlpha: Float,
-    borderAlpha: Float
+    borderAlpha: Float,
+    selectedQQMusicSearchType: QQMusicSearchType = QQMusicSearchType.SONG,
+    onQQMusicSearchTypeClick: (QQMusicSearchType) -> Unit = {}
 ) {
     AnimatedContent(
         targetState = source,
@@ -1734,6 +1748,11 @@ internal fun ExploreSearchTypeBar(
         label = "explore_search_type_bar"
     ) { displayedSource ->
         when (displayedSource) {
+            SearchSource.QQ_MUSIC -> QQMusicSearchTypeChips(
+                selectedQQMusicSearchType,
+                { if (source == displayedSource) onQQMusicSearchTypeClick(it) },
+                selectedAlpha, unselectedAlpha, borderAlpha
+            )
             SearchSource.NETEASE -> {
                 LazyRow(
                     modifier = Modifier
@@ -1793,6 +1812,7 @@ internal fun ExploreSearchTypeBar(
 
 private const val EXPLORE_HISTORY_DISPLAY_LIMIT = 15
 private val EXPLORE_SEARCH_TYPE_BAR_SOURCES = setOf(
+    SearchSource.QQ_MUSIC,
     SearchSource.NETEASE,
     SearchSource.YOUTUBE_MUSIC
 )

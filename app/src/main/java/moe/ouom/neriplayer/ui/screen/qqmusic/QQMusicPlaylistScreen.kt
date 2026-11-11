@@ -45,6 +45,7 @@ internal fun QQMusicPlaylistScreen(playlist:QQMusicPlaylist,onBack:()->Unit,onPl
     val lookup=remember(allPlaylists){FavoriteSongLookup(FavoritesPlaylist.firstOrNull(allPlaylists,context)?.songs.orEmpty())}
     val favoriteRepo=remember(context){FavoritePlaylistRepository.getInstance(context)}
     val favorites by favoriteRepo.favorites.collectAsStateWithLifecycle()
+    val publicCollection = playlist.id.startsWith("album:") || playlist.id.startsWith("artist:")
     val summary=playlist.summary()
     val isFavorite=favorites.any {it.source=="qqmusic" && it.id==summary.id}
     var tracks by remember(playlist.id){mutableStateOf<List<SongItem>>(emptyList())}
@@ -81,8 +82,8 @@ internal fun QQMusicPlaylistScreen(playlist:QQMusicPlaylist,onBack:()->Unit,onPl
     val currentIndex = shown.indexOfFirst { it.stableKey() == current?.stableKey() }
     LaunchedEffect(playlist,refresh,account.savedAt,account.signedIn) {
         exitSelection()
-        tracks=emptyList();loading=account.signedIn;failed=false
-        if(!account.signedIn) return@LaunchedEffect
+        tracks=emptyList();loading=account.signedIn || publicCollection;failed=false
+        if(!account.signedIn && !publicCollection) return@LaunchedEffect
         try {
             when(playlist.id) {
                 "daily"->tracks=vm.repository.daily()
@@ -90,7 +91,7 @@ internal fun QQMusicPlaylistScreen(playlist:QQMusicPlaylist,onBack:()->Unit,onPl
                 else->{
                     var next:Int?=0
                     while(next!=null) {
-                        val page=vm.repository.tracks(playlist,next)
+                        val page=if(publicCollection) vm.catalog.collectionTracks(playlist.id,next) else vm.repository.tracks(playlist,next)
                         val combined=(tracks+page.songs).distinctBy{it.audioId}
                         next=page.nextOffset.takeIf{combined.size>tracks.size}
                         tracks=combined
@@ -117,7 +118,7 @@ internal fun QQMusicPlaylistScreen(playlist:QQMusicPlaylist,onBack:()->Unit,onPl
         onLocatePlaying=if(currentIndex >= 0) { { scope.launch { listState.animateScrollToItem(currentIndex + 2) } } } else null,
         normalActions={
             HapticIconButton(onClick={refresh++}){Icon(Icons.Filled.Refresh,stringResource(CoreR.string.qq_browse_refresh))}
-            if(playlist.id !in listOf("daily","radio")) HapticIconButton(onClick={scope.launch{
+            if(!publicCollection && playlist.id !in listOf("daily","radio")) HapticIconButton(onClick={scope.launch{
                 if(isFavorite)favoriteRepo.removeFavorite(summary.id,"qqmusic") else favoriteRepo.addFavorite(
                     id=summary.id,name=playlist.title,coverUrl=cover,trackCount=tracks.size,source="qqmusic",songs=emptyList())
             }}){Icon(if(isFavorite)Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,stringResource(CoreR.string.favorite_add))}
@@ -134,7 +135,7 @@ internal fun QQMusicPlaylistScreen(playlist:QQMusicPlaylist,onBack:()->Unit,onPl
                 onToggleSelectAll={selectedKeys=toggleDisplayedSongSelection(selectedKeys,shown.map { it.stableKey() }.toSet())},
                 canExport=selectedSongs.isNotEmpty(),onExport={showExport=true})
         },
-        beforeList={if(!account.signedIn) Text(stringResource(CoreR.string.qq_browse_login)) else QQLoadNotice(loading,failed,false,{refresh++})},
+        beforeList={if(!account.signedIn && !publicCollection) Text(stringResource(CoreR.string.qq_browse_login)) else QQLoadNotice(loading,failed,false,{refresh++})},
         playbackActions={PlaylistModernPlaybackActions(
             songCount=if(loading)0 else actionSongs.size,shuffleEnabled=shuffle,repeatMode=repeat,
             onPlayInOrder={if(actionSongs.isNotEmpty())onPlay(actionSongs,0)},

@@ -28,6 +28,10 @@ import moe.ouom.neriplayer.common.locale.LanguageManager
 import moe.ouom.neriplayer.ui.i18n.UiText
 import moe.ouom.neriplayer.ui.viewmodel.feedbackText
 import moe.ouom.neriplayer.core.player.persistence.toSongItem
+import moe.ouom.neriplayer.platform.qqmusic.QQMusicSearchType
+import moe.ouom.neriplayer.platform.qqmusic.QQMusicSearchCollection
+import moe.ouom.neriplayer.platform.qqmusic.QQMusicCatalogRepository
+import moe.ouom.neriplayer.platform.qqmusic.api.QQMusicClient
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
@@ -167,6 +171,10 @@ sealed class ExploreSearchResult {
         override val stableKey: String = "youtubeMusic|creator|${creator.browseId}"
     }
 
+    data class QQCollection(val collection: QQMusicSearchCollection) : ExploreSearchResult() {
+        override val stableKey: String = "qqmusic|${collection.type.name}|${collection.id}"
+    }
+
     data class Notice(
         val title: String,
         val message: String
@@ -191,6 +199,7 @@ data class ExploreUiState(
     val searchKeyword: String = "",
     val searchDisplayQuery: String = "",
     val selectedSearchSource: SearchSource = SearchSource.NETEASE,
+    val selectedQQMusicSearchType: QQMusicSearchType = QQMusicSearchType.SONG,
     val selectedNeteaseSearchType: NeteaseExploreSearchType = NeteaseExploreSearchType.SONG,
     val selectedYouTubeMusicSearchType: YouTubeExploreSearchType = YouTubeExploreSearchType.SONG,
     val isNeteaseLoggedIn: Boolean = false,
@@ -345,6 +354,9 @@ class ExploreViewModel(application: Application) : AndroidViewModel(application)
     private var ytMusicPlaylistsJob: Job? = null
     private var ytMusicPlaylistsPending = false
     private var searchRequestVersion = 0L
+    private val qqCatalog by lazy {
+        QQMusicCatalogRepository(AppContainer.qqMusicAccounts, QQMusicClient(AppContainer.sharedOkHttpClient))
+    }
     private var youtubeEnabled = YouTubeFeatureGate.isEnabled()
 
     private val _uiState = MutableStateFlow(ExploreUiState())
@@ -422,6 +434,19 @@ class ExploreViewModel(application: Application) : AndroidViewModel(application)
             searchPage = 0,
             searchKeyword = "",
             searchDisplayQuery = ""
+        )
+    }
+
+    fun setQQMusicSearchType(type: QQMusicSearchType) {
+        if (type == _uiState.value.selectedQQMusicSearchType) return
+        searchJob?.cancel()
+        searchMoreJob?.cancel()
+        invalidateSearchRequest()
+        _uiState.value = _uiState.value.copy(
+            selectedQQMusicSearchType = type, searching = false, searchError = null,
+            searchResults = emptyList(), searchItems = emptyList(), searchHasMore = false,
+            searchLoadingMore = false, searchLoadMoreError = null, searchPage = 0,
+            searchKeyword = "", searchDisplayQuery = ""
         )
     }
 
@@ -504,6 +529,7 @@ class ExploreViewModel(application: Application) : AndroidViewModel(application)
             return
         }
 
+        val qqType = state.selectedQQMusicSearchType
         val neteaseType = state.selectedNeteaseSearchType
         val keyword = state.searchKeyword
         val matchQuery = state.searchDisplayQuery.ifBlank { keyword }
@@ -521,7 +547,7 @@ class ExploreViewModel(application: Application) : AndroidViewModel(application)
                     return@launch
                 }
                 val result = when (source) {
-                    SearchSource.QQ_MUSIC -> fetchQQMusicSearchPage(keyword, matchQuery, nextPage)
+                    SearchSource.QQ_MUSIC -> fetchQQMusicSearchPage(keyword, matchQuery, nextPage, qqType)
                     SearchSource.NETEASE -> fetchNeteaseSearchPage(
                         keyword = keyword,
                         matchQuery = matchQuery,
@@ -572,24 +598,29 @@ class ExploreViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
-    private suspend fun fetchQQMusicSearchPage(keyword: String, matchQuery: String, page: Int): ExploreSearchFetchResult {
-        val result = AppContainer.qqMusicRepository.search(keyword, page)
+    private suspend fun fetchQQMusicSearchPage(
+        keyword: String, matchQuery: String, page: Int, type: QQMusicSearchType
+    ): ExploreSearchFetchResult {
+        val result = qqCatalog.search(keyword, type, page)
         val songs = rankExploreSongSearchResults(matchQuery, result.songs)
-        return ExploreSearchFetchResult(songs.map { ExploreSearchResult.Song(it) }, page, result.hasMore)
+        val items = songs.map { ExploreSearchResult.Song(it) } +
+            result.collections.map { ExploreSearchResult.QQCollection(it) }
+        return ExploreSearchFetchResult(items, page, result.hasMore)
     }
 
     private fun searchQQMusic(keyword: String, matchQuery: String, requestVersion: Long) {
+        val type = _uiState.value.selectedQQMusicSearchType
         searchJob = viewModelScope.launch {
             try {
-                val result = fetchQQMusicSearchPage(keyword, matchQuery, 1)
+                val result = fetchQQMusicSearchPage(keyword, matchQuery, 1, type)
                 updateSearchStateIfCurrent(requestVersion, SearchSource.QQ_MUSIC) {
                     it.copy(searching = false, searchResults = result.songs, searchItems = result.items,
                         searchPage = result.page, searchHasMore = result.hasMore)
                 }
             } catch (cancelled: CancellationException) { throw cancelled }
-            catch (_: Exception) {
+            catch (error: Exception) {
                 updateSearchStateIfCurrent(requestVersion, SearchSource.QQ_MUSIC) {
-                    it.copy(searching = false, searchError = feedbackText(CoreCommonR.string.qq_music_request_failed))
+                    it.copy(searching = false, searchError = searchErrorMessage(SearchSource.QQ_MUSIC, error))
                 }
             }
         }
@@ -1411,7 +1442,11 @@ class ExploreViewModel(application: Application) : AndroidViewModel(application)
     private fun searchErrorMessage(source: SearchSource, error: Exception): UiText {
         val fallback = error.message ?: feedbackText(CoreCommonR.string.github_sync_failed_message)
         return when (source) {
-            SearchSource.QQ_MUSIC -> feedbackText(CoreCommonR.string.qq_music_request_failed)
+            SearchSource.QQ_MUSIC -> feedbackText(when ((error as? moe.ouom.neriplayer.platform.qqmusic.api.QQMusicException)?.kind) {
+                moe.ouom.neriplayer.platform.qqmusic.api.QQMusicException.Kind.LOGIN_REQUIRED -> CoreCommonR.string.qq_browse_login
+                moe.ouom.neriplayer.platform.qqmusic.api.QQMusicException.Kind.VERIFICATION_REQUIRED -> CoreCommonR.string.qq_music_verification_required
+                else -> CoreCommonR.string.qq_music_request_failed
+            })
             SearchSource.NETEASE -> feedbackText(CoreCommonR.string.error_netease_search, fallback)
             SearchSource.BILIBILI -> feedbackText(CoreCommonR.string.error_bilibili_search, fallback)
             SearchSource.YOUTUBE_MUSIC -> feedbackText(CoreCommonR.string.error_youtube_search, fallback)

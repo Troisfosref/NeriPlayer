@@ -227,7 +227,7 @@ internal fun YouTubeCreatorSearchRow(
 }
 
 @Composable
-private fun LinkedCollectionRow(
+internal fun LinkedCollectionRow(
     title: String,
     subtitle: String,
     coverUrl: String?,

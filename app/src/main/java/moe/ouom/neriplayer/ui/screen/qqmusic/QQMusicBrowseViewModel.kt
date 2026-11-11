@@ -14,6 +14,7 @@ data class QQLoad<T>(val data: T? = null, val loading: Boolean = true, val faile
 class QQMusicBrowseViewModel : ViewModel() {
     private val accounts = AppContainer.qqMusicAccounts
     val account = accounts.state
+    val catalog = QQMusicCatalogRepository(accounts, QQMusicClient(AppContainer.sharedOkHttpClient))
     val repository = QQMusicBrowseRepository(accounts, QQMusicClient(AppContainer.sharedOkHttpClient))
     val liked = MutableStateFlow(QQLoad<QQMusicPlaylist>())
     val created = MutableStateFlow(QQLoad<List<QQMusicPlaylist>>())

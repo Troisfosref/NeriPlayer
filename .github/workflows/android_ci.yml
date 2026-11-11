@@ -111,6 +111,8 @@ jobs:
             :lyrics:testDebugUnitTest --tests '*parser*' \
             :playback:logic:testDebugUnitTest --tests '*PlaybackQualityOwnerTest' \
             :app:testDebugUnitTest --tests '*SettingsAccountProfilesTest' --tests '*SettingsAccountProfileNormalizationTest' \
+            --tests '*QQMusicSearchIntegrationTest' --tests '*ExploreScreenYouTubeGateTest' \
+            --tests '*ExploreSearchPaginationTest' --tests '*ExploreSearchHistoryDisplayTest' \
             :app:assembleRelease -PallowUnsignedRelease=true --warning-mode all --stacktrace
 
       - name: Sign compiled APK (trusted branch only)
