@@ -361,6 +361,16 @@ fun LibraryScreen(
         }
     }
 
+    // A fresh QQ list uses the same expanded large title as the local library.
+    LaunchedEffect(pagerState.currentPage, orderedTabs) {
+        if (orderedTabs.getOrNull(pagerState.currentPage) == LibraryTab.QQMUSIC &&
+            qqMusicListState.firstVisibleItemIndex == 0 && qqMusicListState.firstVisibleItemScrollOffset == 0
+        ) {
+            topAppBarState.heightOffset = 0f
+            topAppBarState.contentOffset = 0f
+        }
+    }
+
     LaunchedEffect(pagerState.currentPage, orderedTabs, initialTab) {
         val currentTab = orderedTabs.getOrNull(pagerState.currentPage) ?: return@LaunchedEffect
         if (currentTab != initialTab) {
@@ -518,7 +528,12 @@ fun LibraryScreen(
                         ) }
 
                         LibraryTab.QQMUSIC -> moe.ouom.neriplayer.ui.screen.qqmusic.QQMusicLibraryContent(
-                            listState = qqMusicListState
+                            listState = qqMusicListState,
+                            refreshEnabled = !offlineMode && topAppBarState.collapsedFraction <= 0.01f,
+                            onCategoryChange = {
+                                topAppBarState.heightOffset = 0f
+                                topAppBarState.contentOffset = 0f
+                            }
                         )
                     }
                 }

@@ -21,10 +21,15 @@ import moe.ouom.neriplayer.platform.youtube.api.client.YouTubeAccountProfileClie
 import moe.ouom.neriplayer.platform.youtube.config.YouTubeFeatureGate
 import okio.ByteString.Companion.encodeUtf8
 import org.json.JSONObject
+import moe.ouom.neriplayer.platform.qqmusic.QQMusicBrowseRepository
+import moe.ouom.neriplayer.platform.qqmusic.QQMusicProfile
+import moe.ouom.neriplayer.platform.qqmusic.api.QQMusicClient
+import moe.ouom.neriplayer.platform.qqmusic.auth.QQMusicAccountState
 
 internal data class SettingsAccountProfile(
     val nickname: String,
-    val avatarUrl: String?
+    val avatarUrl: String?,
+    val accountId: String? = null
 )
 
 internal data class SettingsAccountProfileRequest(
@@ -203,4 +208,21 @@ internal fun settingsAccountProfile(nickname: String, avatarUrl: String): Settin
         }
     }
     return SettingsAccountProfile(nickname = name, avatarUrl = avatar)
+}
+
+internal suspend fun loadQQMusicAccountProfile(account: QQMusicAccountState): SettingsAccountProfile? =
+    loadQQMusicAccountProfileIfCurrent(account, { AppContainer.qqMusicAccounts.state.value }) {
+        QQMusicBrowseRepository(AppContainer.qqMusicAccounts, QQMusicClient(AppContainer.sharedOkHttpClient)).profile()
+    }
+
+internal suspend fun loadQQMusicAccountProfileIfCurrent(
+    account: QQMusicAccountState,
+    readCurrentAccount: () -> QQMusicAccountState,
+    loadProfile: suspend () -> QQMusicProfile
+): SettingsAccountProfile? {
+    if (!account.signedIn || readCurrentAccount() != account) return null
+    val profile = loadProfile()
+    currentCoroutineContext().ensureActive()
+    if (readCurrentAccount() != account) return null
+    return settingsAccountProfile(profile.nickname, profile.avatar.orEmpty())?.copy(accountId = profile.id)
 }

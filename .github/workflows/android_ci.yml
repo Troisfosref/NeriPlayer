@@ -110,6 +110,7 @@ jobs:
             --tests 'moe.ouom.neriplayer.platform.lyrics.repository.QQMusicLyricsRepositoryTest' \
             :lyrics:testDebugUnitTest --tests '*parser*' \
             :playback:logic:testDebugUnitTest --tests '*PlaybackQualityOwnerTest' \
+            :app:testDebugUnitTest --tests '*SettingsAccountProfilesTest' --tests '*SettingsAccountProfileNormalizationTest' \
             :app:assembleRelease -PallowUnsignedRelease=true --warning-mode all --stacktrace
 
       - name: Sign compiled APK (trusted branch only)
@@ -185,4 +186,5 @@ jobs:
             modules/platform/build/reports/tests/testDebugUnitTest/**
             modules/lyrics/build/test-results/testDebugUnitTest/**
             modules/playback/logic/build/test-results/testDebugUnitTest/**
+            app/build/test-results/testDebugUnitTest/**
           if-no-files-found: ignore

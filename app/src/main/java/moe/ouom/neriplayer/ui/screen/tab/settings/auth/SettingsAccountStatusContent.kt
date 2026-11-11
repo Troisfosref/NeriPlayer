@@ -96,6 +96,10 @@ internal fun SettingsLoginExpandedContent(
     val youtubeEnabled by AppContainer.settingsRepo.youtubeEnabledFlow.collectAsStateWithLifecycle(
         initialValue = YouTubeFeatureGate.isEnabled()
     )
+    val qqProfile = rememberSettingsAccountProfile(
+        request = SettingsAccountProfileRequest(qqAccount.signedIn, qqAccount.savedAt),
+        isActive = isActive
+    ) { loadQQMusicAccountProfile(qqAccount) }
     val biliProfile = rememberSettingsAccountProfile(
         request = SettingsAccountProfileRequest(bili.hasSavedCookies, bili.health.savedAt, biliAuthorization.identity),
         isActive = isActive
@@ -122,7 +126,9 @@ internal fun SettingsLoginExpandedContent(
                     platform = SettingsAccountPlatform.QqMusic,
                     hasSavedAuthorization = qqAccount.signedIn,
                     authorizationComplete = qqAccount.signedIn,
-                    savedAtLabel = accountSavedAtText(qqAccount.savedAt)
+                    savedAtLabel = accountSavedAtText(qqAccount.savedAt),
+                    profile = qqProfile.profile,
+                    profileLoading = qqProfile.loading
                 ),
                 SettingsAccountCardUiState(
                     platform = SettingsAccountPlatform.Netease,

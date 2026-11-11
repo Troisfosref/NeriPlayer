@@ -15,7 +15,6 @@ class QQMusicBrowseViewModel : ViewModel() {
     private val accounts = AppContainer.qqMusicAccounts
     val account = accounts.state
     val repository = QQMusicBrowseRepository(accounts, QQMusicClient(AppContainer.sharedOkHttpClient))
-    val profile = MutableStateFlow(QQLoad<QQMusicProfile>())
     val liked = MutableStateFlow(QQLoad<QQMusicPlaylist>())
     val created = MutableStateFlow(QQLoad<List<QQMusicPlaylist>>())
     val collected = MutableStateFlow(QQLoad<List<QQMusicPlaylist>>())
@@ -34,9 +33,8 @@ class QQMusicBrowseViewModel : ViewModel() {
                 combine(account, revision, libraryRequested, accounts.libraryRevision) { a, _, requested, _ ->
                     a.takeIf { requested }
                 }.collectLatest { a ->
-                    profile.value=QQLoad();liked.value=QQLoad();created.value=QQLoad();collected.value=QQLoad()
+                    liked.value=QQLoad();created.value=QQLoad();collected.value=QQLoad()
                     if(a?.signedIn == true) coroutineScope {
-                        launch { load(profile) { repository.profile() } }
                         launch { load(liked) { repository.liked() } }
                         launch { load(created) { repository.created() } }
                         launch { load(collected) { repository.collected() } }
