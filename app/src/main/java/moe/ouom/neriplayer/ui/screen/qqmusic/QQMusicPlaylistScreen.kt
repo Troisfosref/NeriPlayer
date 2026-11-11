@@ -46,8 +46,10 @@ internal fun QQMusicPlaylistScreen(playlist:QQMusicPlaylist,onBack:()->Unit,onPl
     val favoriteRepo=remember(context){FavoritePlaylistRepository.getInstance(context)}
     val favorites by favoriteRepo.favorites.collectAsStateWithLifecycle()
     val publicCollection = playlist.id.startsWith("album:") || playlist.id.startsWith("artist:")
-    val summary=playlist.summary()
-    val isFavorite=favorites.any {it.source=="qqmusic" && it.id==summary.id}
+    val favoriteTarget = remember(playlist) { playlist.favoriteTarget() }
+    val isFavorite = favoriteTarget?.let { target ->
+        favorites.any { it.source == target.source && it.id == target.id }
+    } == true
     var tracks by remember(playlist.id){mutableStateOf<List<SongItem>>(emptyList())}
     var loading by remember{mutableStateOf(false)}
     var failed by remember{mutableStateOf(false)}
@@ -118,10 +120,22 @@ internal fun QQMusicPlaylistScreen(playlist:QQMusicPlaylist,onBack:()->Unit,onPl
         onLocatePlaying=if(currentIndex >= 0) { { scope.launch { listState.animateScrollToItem(currentIndex + 2) } } } else null,
         normalActions={
             HapticIconButton(onClick={refresh++}){Icon(Icons.Filled.Refresh,stringResource(CoreR.string.qq_browse_refresh))}
-            if(!publicCollection && playlist.id !in listOf("daily","radio")) HapticIconButton(onClick={scope.launch{
-                if(isFavorite)favoriteRepo.removeFavorite(summary.id,"qqmusic") else favoriteRepo.addFavorite(
-                    id=summary.id,name=playlist.title,coverUrl=cover,trackCount=tracks.size,source="qqmusic",songs=emptyList())
-            }}){Icon(if(isFavorite)Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,stringResource(CoreR.string.favorite_add))}
+            favoriteTarget?.let { target ->
+                HapticIconButton(onClick = { scope.launch {
+                    try {
+                        if (isFavorite) favoriteRepo.removeFavorite(target.id, target.source)
+                        else favoriteRepo.addFavorite(
+                            id = target.id, name = playlist.title, coverUrl = cover,
+                            trackCount = maxOf(tracks.size, playlist.count), source = target.source,
+                            browseId = target.browseId, songs = emptyList()
+                        )
+                    } catch (cancelled: CancellationException) { throw cancelled }
+                    catch (_: Exception) { snackbar.showSnackbar(context.getString(CoreR.string.qq_action_failed)) }
+                } }) {
+                    Icon(if (isFavorite) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
+                        stringResource(if (isFavorite) CoreR.string.favorite_remove else CoreR.string.favorite_add))
+                }
+            }
         },
         selectionActions={
             HapticIconButton(onClick={

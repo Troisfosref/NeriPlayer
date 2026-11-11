@@ -25,4 +25,5 @@
   <string name="qq_account_id">账号：%1$s</string>
   <string name="qq_account_signed_in_at">登录于 %1$s</string>
   <string name="qq_search_album">专辑</string>
+  <string name="qq_favorite_album">QQ 音乐专辑</string>
 </resources>

@@ -109,6 +109,8 @@ import moe.ouom.neriplayer.ui.haptic.HapticIconButton
 import moe.ouom.neriplayer.ui.haptic.HapticTextButton
 import moe.ouom.neriplayer.util.format.formatPlayCount
 import moe.ouom.neriplayer.util.media.offlineCachedImageRequest
+import moe.ouom.neriplayer.ui.screen.qqmusic.QQ_MUSIC_ALBUM_FAVORITE_SOURCE
+import moe.ouom.neriplayer.ui.screen.qqmusic.toQQMusicAlbumPlaylist
 import org.burnoutcrew.reorderable.ItemPosition
 import org.burnoutcrew.reorderable.ReorderableItem
 import org.burnoutcrew.reorderable.detectReorder
@@ -518,6 +520,7 @@ internal fun FavoritePlaylistList(
                                         return@combinedClickable
                                     }
                                     when (favorite.source) {
+                                        QQ_MUSIC_ALBUM_FAVORITE_SOURCE -> favorite.toQQMusicAlbumPlaylist()?.let(openQQ)
                                         "qqmusic" -> openQQ(moe.ouom.neriplayer.platform.qqmusic.QQMusicPlaylist(
                                             if(favorite.id == -201L) "favorites" else if(favorite.id < 0) "dir:${-favorite.id}" else favorite.id.toString(),
                                             favorite.name,favorite.coverUrl,favorite.trackCount,if(favorite.id<0)(-favorite.id).toInt() else null))
@@ -635,7 +638,7 @@ internal fun FavoritePlaylistList(
                                             FAVORITE_SOURCE_NETEASE_ARTIST,
                                             FAVORITE_SOURCE_BILI_ARTIST,
                                             FAVORITE_SOURCE_YOUTUBE_ARTIST -> Icons.Filled.AccountCircle
-                                            "neteaseAlbum" -> Icons.Filled.Album
+                                            "neteaseAlbum", QQ_MUSIC_ALBUM_FAVORITE_SOURCE -> Icons.Filled.Album
                                             else -> Icons.AutoMirrored.Filled.QueueMusic
                                         },
                                         contentDescription = null,
@@ -713,6 +716,7 @@ internal fun favoriteSourceLabel(source: String): String {
         "youtubeMusic" -> "YouTube"
         "neteaseAlbum" -> stringResource(AppR.string.media_favorite_netease_album)
         "netease" -> "Netease"
+        QQ_MUSIC_ALBUM_FAVORITE_SOURCE -> stringResource(CoreCommonR.string.qq_favorite_album)
         "qqmusic" -> stringResource(CoreCommonR.string.settings_qq_music)
         "bili" -> "Bilibili"
         FAVORITE_SOURCE_NETEASE_ARTIST -> stringResource(CoreCommonR.string.library_favorite_source_artist)
