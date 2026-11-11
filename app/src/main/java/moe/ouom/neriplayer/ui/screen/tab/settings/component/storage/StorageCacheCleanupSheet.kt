@@ -192,7 +192,7 @@ internal fun StorageCacheCleanupContent(
                             audioCache = next, imageCache = next, sharedMedia = next,
                             lyricsCache = next, neteasePlaylistCache = next,
                             biliFavoriteCache = next, biliArchiveCache = next,
-                            youtubePlaylistCache = next, serverBrowseCache = next,
+                            youtubePlaylistCache = next, qqMusicPlaylistCache = next, serverBrowseCache = next,
                             logFiles = next, crashLogs = next,
                             localImportCache = next, otherCache = next
                         ))
@@ -345,6 +345,12 @@ private fun cleanupChoices(options: StorageCacheClearOptions) = listOf(
         description = CoreCommonR.string.storage_desc_youtube_playlist_cache,
         checked = options.youtubePlaylistCache
     ) { current, checked -> current.copy(youtubePlaylistCache = checked) },
+    CacheCleanupChoice(
+        kind = StorageCacheKind.QQMusicPlaylist,
+        title = CoreCommonR.string.storage_type_qq_music_playlist_cache,
+        description = CoreCommonR.string.storage_desc_qq_music_playlist_cache,
+        checked = options.qqMusicPlaylistCache
+    ) { current, checked -> current.copy(qqMusicPlaylistCache = checked) },
     CacheCleanupChoice(
         kind = StorageCacheKind.ServerBrowse,
         title = CoreCommonR.string.storage_type_server_browse_cache,

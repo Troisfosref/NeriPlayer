@@ -110,4 +110,6 @@
     <string name="storage_cleanup_estimating">Calculating…</string>
     <string name="storage_cleanup_occupied_size">Occupied: %1$s</string>
     <string name="storage_cleanup_estimate_unavailable">Some cache sizes are temporarily unavailable</string>
+    <string name="storage_type_qq_music_playlist_cache">QQ Music playlist cache</string>
+    <string name="storage_desc_qq_music_playlist_cache">Cached QQ Music playlists, library lists and track metadata; can be reloaded</string>
 </resources>

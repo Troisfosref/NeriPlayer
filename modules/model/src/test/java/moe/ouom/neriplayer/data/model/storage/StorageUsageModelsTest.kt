@@ -48,6 +48,7 @@ class StorageUsageModelsTest {
             none.copy(neteasePlaylistCache = true),
             none.copy(biliFavoriteCache = true),
             none.copy(biliArchiveCache = true),
+            none.copy(qqMusicPlaylistCache = true),
             none.copy(youtubePlaylistCache = true)
         ).forEach { options ->
             assertTrue(options.toString(), options.hasPlatformCacheSelection)

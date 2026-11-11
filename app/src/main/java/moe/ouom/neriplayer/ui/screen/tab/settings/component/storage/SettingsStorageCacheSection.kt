@@ -179,6 +179,8 @@ internal fun SettingsStorageCacheSection(
     onClearBiliFavoriteCacheChange: (Boolean) -> Unit,
     clearBiliArchiveCache: Boolean,
     onClearBiliArchiveCacheChange: (Boolean) -> Unit,
+    clearQQMusicPlaylistCache: Boolean,
+    onClearQQMusicPlaylistCacheChange: (Boolean) -> Unit,
     clearYoutubePlaylistCache: Boolean,
     onClearYoutubePlaylistCacheChange: (Boolean) -> Unit,
     clearServerBrowseCache: Boolean,
@@ -539,6 +541,7 @@ internal fun SettingsStorageCacheSection(
                 biliFavoriteCache = clearBiliFavoriteCache,
                 biliArchiveCache = clearBiliArchiveCache,
                 youtubePlaylistCache = clearYoutubePlaylistCache,
+                qqMusicPlaylistCache = clearQQMusicPlaylistCache,
                 serverBrowseCache = clearServerBrowseCache,
                 logFiles = clearLogFiles,
                 crashLogs = clearCrashLogs,
@@ -558,6 +561,7 @@ internal fun SettingsStorageCacheSection(
                 onClearBiliFavoriteCacheChange(options.biliFavoriteCache)
                 onClearBiliArchiveCacheChange(options.biliArchiveCache)
                 onClearYoutubePlaylistCacheChange(options.youtubePlaylistCache)
+                onClearQQMusicPlaylistCacheChange(options.qqMusicPlaylistCache)
                 onClearServerBrowseCacheChange(options.serverBrowseCache)
                 onClearLogFilesChange(options.logFiles)
                 onClearCrashLogsChange(options.crashLogs)

@@ -109,4 +109,6 @@
     <string name="storage_cleanup_estimating">正在计算…</string>
     <string name="storage_cleanup_occupied_size">实际占用 %1$s</string>
     <string name="storage_cleanup_estimate_unavailable">部分缓存大小暂时无法估算</string>
+    <string name="storage_type_qq_music_playlist_cache">QQ 音乐歌单缓存</string>
+    <string name="storage_desc_qq_music_playlist_cache">缓存的 QQ 音乐歌单、收藏列表和歌曲资料，可重新加载</string>
 </resources>

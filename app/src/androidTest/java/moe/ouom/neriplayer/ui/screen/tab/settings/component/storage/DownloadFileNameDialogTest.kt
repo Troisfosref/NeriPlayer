@@ -109,6 +109,8 @@ class DownloadFileNameDialogTest {
                             onClearBiliFavoriteCacheChange = {},
                             clearBiliArchiveCache = false,
                             onClearBiliArchiveCacheChange = {},
+                            clearQQMusicPlaylistCache = false,
+                            onClearQQMusicPlaylistCacheChange = {},
                             clearYoutubePlaylistCache = false,
                             onClearYoutubePlaylistCacheChange = {},
                             clearServerBrowseCache = false,

@@ -180,6 +180,23 @@ class StorageUsageComponentsTest {
     }
 
     @Test
+    fun cleanerSelectsOnlyQQMusicCacheWithoutDeletingOtherPlatforms() = runBlocking {
+        val locations = locations()
+        val retained = write(locations.sharedMediaDir, "shared", 7)
+        val files = TestCacheFiles()
+        val platforms = TestPlatformCaches()
+
+        val result = StorageCacheCleaner(locations, files, platforms).clear(
+            StorageCacheClearOptions(audioCache = false, imageCache = false, qqMusicPlaylistCache = true)
+        )
+
+        assertEquals(ExtraCacheClearResult(true, 0, 80, 0), result)
+        assertEquals(listOf("qqmusic"), platforms.cleared)
+        assertTrue(files.cleared.isEmpty())
+        assertTrue(retained.exists())
+    }
+
+    @Test
     fun cleanerContinuesAfterFileFailureAndReportsPartialResult() = runBlocking {
         val locations = locations()
         val retained = write(locations.sharedMediaDir, "shared", 7)

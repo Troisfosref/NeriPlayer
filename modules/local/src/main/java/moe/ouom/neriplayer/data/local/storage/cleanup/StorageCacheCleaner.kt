@@ -83,6 +83,7 @@ private fun selectedExtraCaches(options: StorageCacheClearOptions): List<Storage
     StorageCacheKind.BiliFavorite to options.biliFavoriteCache,
     StorageCacheKind.BiliArchive to options.biliArchiveCache,
     StorageCacheKind.YouTubePlaylist to options.youtubePlaylistCache,
+    StorageCacheKind.QQMusicPlaylist to options.qqMusicPlaylistCache,
     StorageCacheKind.ServerBrowse to options.serverBrowseCache,
     StorageCacheKind.Other to options.otherCache
 ).filter { it.second }.map { it.first }

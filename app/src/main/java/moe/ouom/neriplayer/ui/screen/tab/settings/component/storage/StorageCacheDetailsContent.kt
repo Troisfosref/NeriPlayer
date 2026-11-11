@@ -557,6 +557,7 @@ private fun StorageUsageItemKind.toStorageIcon(): ImageVector {
         StorageUsageItemKind.NeteasePlaylistCache -> StorageGlyphs.Playlist
         StorageUsageItemKind.BiliFavoriteCache -> StorageGlyphs.Favorite
         StorageUsageItemKind.BiliArchiveCache -> StorageGlyphs.Archive
+        StorageUsageItemKind.QQMusicPlaylistCache -> StorageGlyphs.VideoPlaylist
         StorageUsageItemKind.YouTubePlaylistCache -> StorageGlyphs.VideoPlaylist
         StorageUsageItemKind.ServerBrowseCache -> StorageGlyphs.Playlist
         StorageUsageItemKind.OtherCache -> StorageGlyphs.Layers

@@ -33,6 +33,7 @@ enum class StorageCacheKind {
     BiliFavorite,
     BiliArchive,
     YouTubePlaylist,
+    QQMusicPlaylist,
     ServerBrowse,
     LogFiles,
     CrashLogs,
@@ -50,6 +51,7 @@ enum class StorageUsageItemKind {
     BiliFavoriteCache,
     BiliArchiveCache,
     YouTubePlaylistCache,
+    QQMusicPlaylistCache,
     ServerBrowseCache,
     OtherCache,
     DownloadedMusic,
@@ -82,7 +84,8 @@ data class StorageCacheClearOptions(
     val crashLogs: Boolean = false,
     val otherCache: Boolean = false,
     val retainRecentSongs: Int = 0,
-    val localImportCache: Boolean = false
+    val localImportCache: Boolean = false,
+    val qqMusicPlaylistCache: Boolean = false
 ) {
     val hasSelection: Boolean
         get() = needsPlayerCacheClear || needsExtraCacheClear
@@ -96,7 +99,7 @@ data class StorageCacheClearOptions(
 
     val hasPlatformCacheSelection: Boolean
         get() = neteasePlaylistCache || biliFavoriteCache || biliArchiveCache ||
-            youtubePlaylistCache || serverBrowseCache
+            youtubePlaylistCache || qqMusicPlaylistCache || serverBrowseCache
 }
 
 data class StorageUsageItem(

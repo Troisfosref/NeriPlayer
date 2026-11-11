@@ -43,6 +43,7 @@ internal class SettingsStorageSelectionState {
     var clearBiliFavoriteCache by mutableStateOf(false)
     var clearBiliArchiveCache by mutableStateOf(false)
     var clearYoutubePlaylistCache by mutableStateOf(false)
+    var clearQQMusicPlaylistCache by mutableStateOf(false)
     var clearServerBrowseCache by mutableStateOf(false)
     var clearLogFiles by mutableStateOf(false)
     var clearCrashLogs by mutableStateOf(false)
@@ -219,6 +220,8 @@ internal fun LazyListScope.settingsStoragePageItems(
                 onClearBiliFavoriteCacheChange = { selection.clearBiliFavoriteCache = it },
                 clearBiliArchiveCache = selection.clearBiliArchiveCache,
                 onClearBiliArchiveCacheChange = { selection.clearBiliArchiveCache = it },
+                clearQQMusicPlaylistCache = selection.clearQQMusicPlaylistCache,
+                onClearQQMusicPlaylistCacheChange = { selection.clearQQMusicPlaylistCache = it },
                 clearYoutubePlaylistCache = selection.clearYoutubePlaylistCache,
                 onClearYoutubePlaylistCacheChange = { selection.clearYoutubePlaylistCache = it },
                 clearServerBrowseCache = selection.clearServerBrowseCache,

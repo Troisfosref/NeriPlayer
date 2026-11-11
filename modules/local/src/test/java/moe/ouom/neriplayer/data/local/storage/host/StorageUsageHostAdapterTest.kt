@@ -51,7 +51,7 @@ class StorageUsageHostAdapterTest {
         val summary = StorageUsagePresenter(resources).present(snapshot)
 
         assertEquals(3, summary.sections.size)
-        assertEquals(24, summary.sections.sumOf { it.items.size })
+        assertEquals(25, summary.sections.sumOf { it.items.size })
         val serverCache = summary.sections.flatMap { it.items }
             .single { it.kind == StorageUsageItemKind.ServerBrowseCache }
         assertEquals(StorageCacheKind.ServerBrowse, serverCache.cacheKind)

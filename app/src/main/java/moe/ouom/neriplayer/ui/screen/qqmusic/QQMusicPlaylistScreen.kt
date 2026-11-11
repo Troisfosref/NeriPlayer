@@ -40,6 +40,7 @@ internal fun QQMusicPlaylistScreen(playlist:QQMusicPlaylist,onBack:()->Unit,onPl
     val context=LocalContext.current
     val scope=rememberCoroutineScope()
     val account by vm.account.collectAsStateWithLifecycle()
+    val libraryRevision by moe.ouom.neriplayer.core.di.AppContainer.qqMusicAccounts.libraryRevision.collectAsStateWithLifecycle()
     val local=remember(context){LocalPlaylistRepository.getInstance(context)}
     val allPlaylists by PlayerManager.playlistsFlow.collectAsStateWithLifecycle()
     val lookup=remember(allPlaylists){FavoriteSongLookup(FavoritesPlaylist.firstOrNull(allPlaylists,context)?.songs.orEmpty())}
@@ -50,9 +51,9 @@ internal fun QQMusicPlaylistScreen(playlist:QQMusicPlaylist,onBack:()->Unit,onPl
     val isFavorite = favoriteTarget?.let { target ->
         favorites.any { it.source == target.source && it.id == target.id }
     } == true
-    var tracks by remember(playlist.id){mutableStateOf<List<SongItem>>(emptyList())}
-    var loading by remember{mutableStateOf(false)}
-    var failed by remember{mutableStateOf(false)}
+    var tracks by remember(playlist.id,account.savedAt){mutableStateOf<List<SongItem>>(emptyList())}
+    var loading by remember(playlist.id,account.savedAt){mutableStateOf(false)}
+    var failed by remember(playlist.id,account.savedAt){mutableStateOf(false)}
     var showExport by remember{mutableStateOf(false)}
     var selectionMode by remember { mutableStateOf(false) }
     var selectedKeys by remember { mutableStateOf(emptySet<String>()) }
@@ -82,25 +83,15 @@ internal fun QQMusicPlaylistScreen(playlist:QQMusicPlaylist,onBack:()->Unit,onPl
     val selectedSongs = remember(tracks, selectedKeys) { tracks.filter { it.stableKey() in selectedKeys } }
     val actionSongs = if (selectionMode) selectedSongs else shown
     val currentIndex = shown.indexOfFirst { it.stableKey() == current?.stableKey() }
-    LaunchedEffect(playlist,refresh,account.savedAt,account.signedIn) {
+    LaunchedEffect(playlist.id,refresh,account.savedAt,account.signedIn,libraryRevision) {
         exitSelection()
-        tracks=emptyList();loading=account.signedIn || publicCollection;failed=false
-        if(!account.signedIn && !publicCollection) return@LaunchedEffect
-        try {
-            when(playlist.id) {
-                "daily"->tracks=vm.repository.daily()
-                "radio"->tracks=vm.repository.radio()
-                else->{
-                    var next:Int?=0
-                    while(next!=null) {
-                        val page=if(publicCollection) vm.catalog.collectionTracks(playlist.id,next) else vm.repository.tracks(playlist,next)
-                        val combined=(tracks+page.songs).distinctBy{it.audioId}
-                        next=page.nextOffset.takeIf{combined.size>tracks.size}
-                        tracks=combined
-                    }
-                }
-            }
-        } catch(c:CancellationException){throw c} catch(_:Exception){failed=true} finally{loading=false}
+        if(!account.signedIn && !publicCollection) {
+            tracks=emptyList();loading=false;failed=false
+            return@LaunchedEffect
+        }
+        vm.loadPlaylist(playlist,force=refresh>0,change=libraryRevision) { state ->
+            tracks=state.data.orEmpty();loading=state.loading;failed=state.failed
+        }
     }
     fun toggleSong(song:SongItem,exists:Boolean){scope.launch{
         try { if(exists)local.removeFromFavorites(song) else local.addToFavorites(song) }
