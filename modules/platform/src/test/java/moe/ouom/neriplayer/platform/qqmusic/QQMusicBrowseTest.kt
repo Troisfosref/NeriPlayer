@@ -12,6 +12,15 @@ import org.junit.Test
 import org.mockito.Mockito
 
 class QQMusicBrowseTest {
+    @Test fun `QZone system playlist is hidden regardless of name case or spacing`() {
+        for (title in listOf("QZone背景音乐", "Qzone背景音乐", "qzone背景音乐", " QZone 背景音乐 ")) {
+            assertTrue(isQQHiddenSystemPlaylist(QQMusicPlaylist("42", title)))
+        }
+        assertTrue(isQQHiddenSystemPlaylist(QQMusicPlaylist("favorites", "Liked", directory = 201)))
+        assertFalse(isQQHiddenSystemPlaylist(QQMusicPlaylist("123", "我的背景音乐")))
+        assertFalse(isQQHiddenSystemPlaylist(QQMusicPlaylist("456", "QZone精选")))
+    }
+
     @Test fun `playlist directory is distinct from its public ID`() {
         val p=requireNotNull(qqBrowsePlaylist(JSONObject("""{"tid":"123456","dirid":42,"title":"Mine","cover":{"medium_url":"//img.qq.com/a.jpg"},"song_cnt":130}""")))
         assertEquals("123456",p.id);assertEquals(42,p.directory);assertEquals(130,p.count)

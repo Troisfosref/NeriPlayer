@@ -7,6 +7,7 @@ import moe.ouom.neriplayer.platform.qqmusic.api.QQMusicClient
 import moe.ouom.neriplayer.platform.qqmusic.api.QQMusicException
 import moe.ouom.neriplayer.platform.qqmusic.api.qqAccountId
 import moe.ouom.neriplayer.platform.qqmusic.api.qqComm
+import moe.ouom.neriplayer.platform.qqmusic.api.qqMusicKey
 import moe.ouom.neriplayer.platform.qqmusic.auth.QQMusicAccountRepository
 import org.json.JSONArray
 import org.json.JSONObject
@@ -72,9 +73,11 @@ class QQMusicCatalogRepository(
         require(album || id.startsWith("artist:"))
         val params = if (album) JSONObject().put("albumMid", mid).put("begin", offset).put("num", 100).put("order", 2)
             else JSONObject().put("singerMid", mid).put("begin", offset).put("num", 50).put("order", 1)
+        val comm = JSONObject().put("uin", qqAccountId(cookie).ifBlank { "0" }).put("format", "json")
+            .put("ct", 19).put("cv", 0).put("authst", qqMusicKey(cookie))
         val data = client.post("collection",
             if (album) "music.musichallAlbum.AlbumSongList" else "music.musichallSong.SongListInter",
-            if (album) "GetAlbumSongList" else "GetSingerSongList", params, cookie)
+            if (album) "GetAlbumSongList" else "GetSingerSongList", params, cookie, commOverride = comm)
         val raw = data.optJSONArray("songList") ?: throw QQMusicException(QQMusicException.Kind.REQUEST_FAILED)
         val total = data.optInt("totalNum", -1)
         val end = offset + raw.length()

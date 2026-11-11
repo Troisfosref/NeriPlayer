@@ -52,7 +52,7 @@ class QQMusicBrowseRepository(private val accounts: QQMusicAccountRepository, pr
             val raw=JSONArray().apply { (modern.objects()+legacy.objects()).forEach { put(it) } }
             val page=raw.objects().mapNotNull(::qqBrowsePlaylist)
             if(offset>0 && raw.length()>0 && page.all { p -> result.any { it.id==p.id } }) throw QQMusicException(QQMusicException.Kind.REQUEST_FAILED)
-            result += page.filter { it.directory != 201 && it.title !in listOf("我喜欢","我喜欢的音乐","Qzone背景音乐","本地上传") }
+            result += page.filter { !isQQHiddenSystemPlaylist(it) }
             if (count<100) break
             offset+=count
         }
@@ -141,4 +141,10 @@ internal fun qqBrowseTrackPage(data: JSONObject, offset: Int, key: String, total
     val raw=data.optJSONArray(key) ?: throw QQMusicException(QQMusicException.Kind.REQUEST_FAILED)
     val end=offset+raw.length()
     return QQMusicTrackPage(qqBrowseSongs(raw),end.takeIf { raw.length()>0 && (if(total>=0) end<total else raw.length()>=100) && data.optInt("hasmore",1)!=0 })
+}
+
+internal fun isQQHiddenSystemPlaylist(playlist: QQMusicPlaylist): Boolean {
+    val title = playlist.title.replace(Regex("\\s+"), "")
+    return playlist.directory == 201 || listOf("我喜欢", "我喜欢的音乐", "QZone背景音乐", "本地上传")
+        .any { it.equals(title, ignoreCase = true) }
 }
