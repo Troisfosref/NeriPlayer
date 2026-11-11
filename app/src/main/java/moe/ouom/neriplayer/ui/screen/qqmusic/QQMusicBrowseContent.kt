@@ -122,11 +122,12 @@ internal fun QQMusicHomeContent(refreshKey: Int, favoriteSongLookup: FavoriteSon
     Column(Modifier.fillMaxWidth()) {
         listOf("daily" to (stringResource(CoreR.string.qq_browse_daily) to daily),"radio" to (stringResource(CoreR.string.qq_browse_radio) to radio)).forEach { (id,section) ->
             val (title,state)=section
+            val songs = state.data.orEmpty()
             SectionHeader(Icons.Outlined.Radar,title)
             QQLoadNotice(state.loading,state.failed,state.data?.isEmpty()==true,vm::refresh)
-            if(!state.data.isNullOrEmpty()) {
-                ResponsiveSongPagerList(state.data.orEmpty(),{songs,index->PlayerManager.playPlaylist(songs,index)},favoriteSongLookup,onFavoriteToggle,onShowSnackbar,false)
-                TextButton(onClick={open(QQMusicPlaylist(id,title,state.data.firstOrNull()?.coverUrl,state.data.size))}){Text(stringResource(CoreR.string.qq_browse_more))}
+            if(songs.isNotEmpty()) {
+                ResponsiveSongPagerList(songs,{tracks,index->PlayerManager.playPlaylist(tracks,index)},favoriteSongLookup,onFavoriteToggle,onShowSnackbar,false)
+                TextButton(onClick={open(QQMusicPlaylist(id,title,songs.firstOrNull()?.coverUrl,songs.size))}){Text(stringResource(CoreR.string.qq_browse_more))}
             }
         }
         SectionHeader(Icons.Outlined.Star,stringResource(CoreR.string.qq_browse_recommended))
