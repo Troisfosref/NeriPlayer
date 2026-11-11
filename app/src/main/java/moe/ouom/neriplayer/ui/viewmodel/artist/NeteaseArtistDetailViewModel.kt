@@ -1,6 +1,5 @@
 package moe.ouom.neriplayer.ui.viewmodel.artist
 
-import moe.ouom.neriplayer.ui.i18n.UiText
 import moe.ouom.neriplayer.ui.viewmodel.feedbackText
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
@@ -36,30 +35,6 @@ private const val TAG = "NERI-ArtistVM"
 private const val SONG_PAGE_SIZE = 50
 private const val ALBUM_PAGE_SIZE = 30
 
-data class NeteaseArtistHeader(
-    val id: Long,
-    val name: String,
-    val coverUrl: String,
-    val avatarUrl: String,
-    val alias: String,
-    val briefDesc: String,
-    val musicSize: Int,
-    val albumSize: Int,
-    val followed: Boolean
-)
-
-data class NeteaseArtistDetailUiState(
-    val loading: Boolean = true,
-    val followUpdating: Boolean = false,
-    val error: UiText? = null,
-    val header: NeteaseArtistHeader? = null,
-    val songs: List<SongItem> = emptyList(),
-    val albums: List<AlbumSummary> = emptyList(),
-    val songsHasMore: Boolean = false,
-    val albumsHasMore: Boolean = false,
-    val songsLoadingMore: Boolean = false,
-    val albumsLoadingMore: Boolean = false
-)
 
 class NeteaseArtistDetailViewModel internal constructor(
     application: Application,

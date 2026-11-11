@@ -256,7 +256,7 @@ class ArtistResponsiveLayoutTest {
         onSongClick: (List<SongItem>, Int) -> Unit = { _, _ -> }
     ) {
         var tab by remember { mutableIntStateOf(0) }
-        NeteaseArtistDetailContent(
+        ArtistDetailContent(
             ui = ui, listState = rememberLazyListState(), selectedTab = tab,
             onTabSelected = { tab = it; onTabSelected(it) }, onRetry = {}, onToggleFollow = {},
             onLoadMoreSongs = {}, onLoadMoreAlbums = {}, onSongClick = onSongClick,

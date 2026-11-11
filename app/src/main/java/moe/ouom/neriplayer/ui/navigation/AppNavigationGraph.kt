@@ -108,8 +108,15 @@ internal class AppNavigationGraphOwner(
             val playlist = navigationGson.fromJson(entry.arguments?.getString("playlistJson"), moe.ouom.neriplayer.platform.qqmusic.QQMusicPlaylist::class.java)
             val qqRenderScene = presentation.renderScene
             qqRenderScene("qq_playlist_detail/{playlistJson}") {
-                moe.ouom.neriplayer.ui.screen.qqmusic.QQMusicPlaylistScreen(playlist, { navController.popBackStack() },
-                    { songs, index -> mediaActions.playSongs(songs, index, moe.ouom.neriplayer.ui.screen.qqmusic.qqPlaylistRoute(playlist)) })
+                val play: (List<SongItem>,Int) -> Unit = { songs,index ->
+                    mediaActions.playSongs(songs,index,moe.ouom.neriplayer.ui.screen.qqmusic.qqPlaylistRoute(playlist))
+                }
+                if(playlist.id.startsWith("artist:")) {
+                    moe.ouom.neriplayer.ui.screen.qqmusic.QQMusicArtistDetailScreen(playlist,
+                        { navController.popBackStack() },play,offlineMode=presentation.offlineMode)
+                } else {
+                    moe.ouom.neriplayer.ui.screen.qqmusic.QQMusicPlaylistScreen(playlist,{ navController.popBackStack() },play)
+                }
             }
         }
         registerDiscoveryAndMediaRoutes(

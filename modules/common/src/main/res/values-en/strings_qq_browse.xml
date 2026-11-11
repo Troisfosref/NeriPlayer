@@ -26,4 +26,6 @@
   <string name="qq_account_signed_in_at">Signed in %1$s</string>
   <string name="qq_search_album">Albums</string>
   <string name="qq_favorite_album">QQ Music album</string>
+  <string name="qq_view_artist">View artist</string>
+  <string name="qq_navigation_failed">Could not load QQ Music album or artist information</string>
 </resources>

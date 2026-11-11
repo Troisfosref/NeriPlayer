@@ -238,6 +238,14 @@ internal fun NeteaseArtistPickerSheet(
     onDismiss: () -> Unit,
     onSelect: (NeteaseArtistSummary) -> Unit
 ) {
+    ArtistPickerSheet(artists,onDismiss,{it.name},onSelect)
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+internal fun <T> ArtistPickerSheet(
+    artists: List<T>, onDismiss: () -> Unit, name: (T) -> String, onSelect: (T) -> Unit
+) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -256,7 +264,7 @@ internal fun NeteaseArtistPickerSheet(
                 modifier = Modifier.padding(horizontal = 24.dp, vertical = 12.dp)
             )
             artists.forEach { artist ->
-                NeteaseArtistPickerRow(artist, onSelect)
+                ArtistPickerListItem(name(artist),null,Modifier.artistSelectionModifier(artist,onSelect))
             }
         }
     }
@@ -291,14 +299,6 @@ internal fun YouTubeMusicCreatorPickerSheet(
             }
         }
     }
-}
-
-@Composable
-private fun NeteaseArtistPickerRow(
-    artist: NeteaseArtistSummary,
-    onSelect: (NeteaseArtistSummary) -> Unit
-) {
-    ArtistPickerListItem(artist.name, null, Modifier.artistSelectionModifier(artist, onSelect))
 }
 
 @Composable

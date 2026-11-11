@@ -934,8 +934,13 @@ fun NowPlayingScreen(
         }
     }
 
+    val qqArtistNavigation=moe.ouom.neriplayer.ui.screen.qqmusic.rememberQQMusicSongNavigation(
+        currentSong,offlineMode,snackbarHostState)
     val openCurrentArtist: () -> Unit = {
         when {
+            currentSong?.let { moe.ouom.neriplayer.data.model.qqmusic.QQMusicSongRef.from(it) } != null -> {
+                qqArtistNavigation.openArtist()
+            }
             currentSong?.let(::isBiliUploaderNavigationSource) == true -> {
                 openCurrentBiliUploader()
             }

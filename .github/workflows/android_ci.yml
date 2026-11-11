@@ -113,6 +113,8 @@ jobs:
             :app:testDebugUnitTest --tests '*SettingsAccountProfilesTest' --tests '*SettingsAccountProfileNormalizationTest' \
             --tests '*QQMusicSearchIntegrationTest' --tests '*QQMusicCollectionFavoritesTest' --tests '*ExploreScreenYouTubeGateTest' \
             --tests '*ExploreSearchPaginationTest' --tests '*ExploreSearchHistoryDisplayTest' --tests '*ExploreLinkRecognizerTest' \
+            --tests '*QQMusicArtistDetailViewModelTest' --tests '*NeteaseArtistDetailContentTest' \
+            --tests '*NeteaseArtistDetailViewModelLoadingTest' --tests '*NeteaseArtistDetailViewModelFollowTest' \
             :download:runtime:testDebugUnitTest --tests '*QQMusicDownloadLyricsTest' \
             :model:testDebugUnitTest --tests '*StorageUsageModelsTest' \
             :local:testDebugUnitTest --tests '*StorageUsageSummaryTest' --tests '*StorageUsageComponentsTest' --tests '*StorageUsageHostAdapterTest' \

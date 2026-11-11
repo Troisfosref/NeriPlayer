@@ -212,11 +212,20 @@ class NeteaseArtistDetailContentTest {
         )
     }
 
+    @Test
+    fun `shared artist layout can hide unsupported follow and opens the full introduction`() {
+        setContent { NeteaseArtistDetailUiState(loading=false,header=header.copy(canFollow=false),songs=songs) }
+        composeRule.onNodeWithText(string(CoreCommonR.string.artist_follow)).assertDoesNotExist()
+        composeRule.onNodeWithText(header.briefDesc).performClick()
+        composeRule.onNodeWithText(string(CoreCommonR.string.action_close)).assertExists().performClick()
+        composeRule.onNodeWithText(string(CoreCommonR.string.artist_tab_albums)).assertExists()
+    }
+
     private fun setContent(ui: () -> NeteaseArtistDetailUiState) {
         composeRule.setContent {
             var selectedTab by remember { mutableIntStateOf(0) }
             MaterialTheme {
-                NeteaseArtistDetailContent(
+                ArtistDetailContent(
                     ui = ui(),
                     listState = rememberLazyListState(),
                     selectedTab = selectedTab,

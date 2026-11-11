@@ -269,6 +269,19 @@ object AppContainer {
     private const val YOUTUBE_DOWNLOAD_PLAYBACK_CALL_TIMEOUT_MS = 20_000L
 
     val qqMusicAccounts by lazy { moe.ouom.neriplayer.platform.qqmusic.auth.QQMusicAccountRepository(application) }
+    val qqMusicSongNavigation by lazy {
+        moe.ouom.neriplayer.platform.qqmusic.artist.QQMusicSongNavigationRepository(qqMusicAccounts,
+            moe.ouom.neriplayer.platform.qqmusic.api.QQMusicClient(sharedOkHttpClient))
+    }
+    val qqMusicArtistRepository by lazy {
+        moe.ouom.neriplayer.platform.qqmusic.artist.QQMusicArtistRepository(qqMusicAccounts,
+            moe.ouom.neriplayer.platform.qqmusic.api.QQMusicClient(sharedOkHttpClient))
+    }
+    val qqMusicArtistCache by lazy {
+        moe.ouom.neriplayer.platform.qqmusic.cache.QQMusicArtistCacheRepository(
+            moe.ouom.neriplayer.data.local.database.store.PlatformPlaylistCacheRoomStore(
+                moe.ouom.neriplayer.data.local.database.NeriUserDataDatabase.getInstance(application)))
+    }
     val qqMusicBrowseCache by lazy {
         moe.ouom.neriplayer.platform.qqmusic.cache.QQMusicBrowseCacheRepository(
             moe.ouom.neriplayer.data.local.database.store.PlatformPlaylistCacheRoomStore(

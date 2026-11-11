@@ -410,7 +410,7 @@ class NeteaseArtistTabletLayoutTest {
                                                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
                                             )
                                             Box(Modifier.weight(1f).fillMaxWidth()) {
-                                                NeteaseArtistDetailContent(
+                                                ArtistDetailContent(
                                                     ui = ui,
                                                     listState = if (selectedTab == 0) lists.songs else lists.albums,
                                                     selectedTab = selectedTab,
@@ -484,7 +484,7 @@ class NeteaseArtistTabletLayoutTest {
                         modifier = Modifier
                             .testTag(FIXTURE_ROOT)
                     ) {
-                        NeteaseArtistDetailContent(
+                        ArtistDetailContent(
                             ui = ui,
                             listState = if (selectedTab == 0) lists.songs else lists.albums,
                             selectedTab = selectedTab,

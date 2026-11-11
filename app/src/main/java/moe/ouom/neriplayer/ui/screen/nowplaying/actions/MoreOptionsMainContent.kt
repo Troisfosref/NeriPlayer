@@ -43,6 +43,7 @@ import androidx.compose.material.icons.outlined.LibraryMusic
 import androidx.compose.material.icons.automirrored.outlined.MenuBook
 import androidx.compose.material.icons.automirrored.outlined.PlaylistAdd
 import androidx.compose.material.icons.outlined.MusicNote
+import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material.icons.outlined.SkipNext
 import androidx.compose.material.icons.outlined.Subtitles
@@ -180,6 +181,7 @@ internal fun MoreOptionsMainContent(
                 onEnterAlbum = onEnterAlbum,
                 snackbarHostState = snackbarHostState
             )
+            QQMusicNavigationActions(originalSong,offlineMode,isDismissing,snackbarHostState,onDismissSheet)
             QQMusicCollectionAction(originalSong, offlineMode || isDismissing, snackbarHostState)
             NeteasePlaylistCollectionAction(
                 owner = viewModel.neteasePlaylistCollection,
@@ -785,6 +787,22 @@ private fun MoreOptionsItem(
             modifier = Modifier.size(20.dp)
         )
     }
+}
+
+@Composable
+private fun QQMusicNavigationActions(song: SongItem,offlineMode: Boolean,isDismissing: Boolean,
+    snackbar: SnackbarHostState,onDismissSheet: (() -> Unit) -> Unit) {
+    if(QQMusicSongRef.from(song)==null) return
+    val open=moe.ouom.neriplayer.ui.screen.qqmusic.LocalQQPlaylistOpen.current
+    val navigation=moe.ouom.neriplayer.ui.screen.qqmusic.rememberQQMusicSongNavigation(song,offlineMode,snackbar) { target ->
+        onDismissSheet { open(target) }
+    }
+    MoreOptionsItem(title=stringResource(CoreCommonR.string.music_view_album,song.album),
+        icon=Icons.Outlined.LibraryMusic,hue=MoreHuePurple,enabled=!isDismissing && !navigation.busy,
+        busy=navigation.busy,onClick=navigation.openAlbum)
+    MoreOptionsItem(title=stringResource(CoreCommonR.string.qq_view_artist),
+        icon=Icons.Outlined.Person,hue=MoreHueTeal,enabled=!isDismissing && !navigation.busy,
+        onClick=navigation.openArtist)
 }
 
 @Composable

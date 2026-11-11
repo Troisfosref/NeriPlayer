@@ -26,4 +26,6 @@
   <string name="qq_account_signed_in_at">登录于 %1$s</string>
   <string name="qq_search_album">专辑</string>
   <string name="qq_favorite_album">QQ 音乐专辑</string>
+  <string name="qq_view_artist">查看歌手</string>
+  <string name="qq_navigation_failed">暂时无法获取 QQ 音乐的专辑或歌手信息</string>
 </resources>

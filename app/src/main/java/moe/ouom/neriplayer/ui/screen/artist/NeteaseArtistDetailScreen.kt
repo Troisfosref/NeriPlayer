@@ -4,6 +4,7 @@ import moe.ouom.neriplayer.ui.i18n.asString
 import moe.ouom.neriplayer.ui.theme.neriRoundedShape
 import android.app.Application
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -57,6 +58,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -145,7 +147,7 @@ fun NeteaseArtistDetailScreen(
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
             )
 
-            NeteaseArtistDetailContent(
+            ArtistDetailContent(
                 ui = ui,
                 listState = listState,
                 selectedTab = selectedTab,
@@ -163,7 +165,7 @@ fun NeteaseArtistDetailScreen(
 }
 
 @Composable
-internal fun NeteaseArtistDetailContent(
+internal fun ArtistDetailContent(
     ui: NeteaseArtistDetailUiState,
     listState: LazyListState,
     selectedTab: Int,
@@ -604,15 +606,26 @@ private fun ArtistPhoneHeaderDetails(
 
 @Composable
 private fun ArtistBriefDescription(header: NeteaseArtistHeader?, maxLines: Int) {
-    val briefDesc = header?.briefDesc
-    if (briefDesc.isNullOrBlank()) return
+    val artist = header ?: return
+    val briefDesc = artist.briefDesc
+    if (briefDesc.isBlank()) return
+    var expanded by rememberSaveable(artist.id, briefDesc) { mutableStateOf(false) }
     Spacer(Modifier.height(10.dp))
     Text(
         text = briefDesc,
         style = MaterialTheme.typography.bodyMedium,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
         maxLines = maxLines,
-        overflow = TextOverflow.Ellipsis
+        overflow = TextOverflow.Ellipsis,
+        modifier = Modifier.clickable { expanded = true }
+    )
+    if (expanded) moe.ouom.neriplayer.ui.component.overlay.DensityScaledAlertDialog(
+        onDismissRequest = { expanded = false },
+        title = { Text(artist.name) },
+        text = { Text(briefDesc, Modifier.verticalScroll(rememberScrollState())) },
+        confirmButton = { androidx.compose.material3.TextButton(onClick = { expanded = false }) {
+            Text(stringResource(CoreCommonR.string.action_close))
+        } }
     )
 }
 
@@ -623,6 +636,7 @@ private fun ArtistFollowButton(
     onToggleFollow: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    if (header?.canFollow == false) return
     val followed = header?.followed == true
     FilledTonalButton(
         enabled = header != null && !followUpdating,
