@@ -4,6 +4,7 @@ package moe.ouom.neriplayer.platform.qqmusic.artist
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
+import okhttp3.HttpUrl.Companion.toHttpUrl
 import moe.ouom.neriplayer.data.model.SongItem
 import moe.ouom.neriplayer.platform.qqmusic.QQMusicPlaylist
 import moe.ouom.neriplayer.platform.qqmusic.api.QQMusicClient
@@ -48,7 +49,7 @@ class QQMusicArtistRepository(private val accounts: QQMusicAccountRepository, pr
         val raw=data.optJSONArray("albumList") ?: throw QQMusicException(QQMusicException.Kind.REQUEST_FAILED)
         val total=data.optInt("total",data.optInt("totalNum",-1))
         val items=(0 until raw.length()).mapNotNull { index ->
-            raw.optJSONObject(index)?.let { qqArtistAlbum(it.optJSONObject("albumInfo") ?: it) }
+            raw.optJSONObject(index)?.let { qqArtistAlbum(it.optJSONObject("albumInfo") ?: it,it) }
         }.distinctBy { it.id }
         return QQMusicArtistPage(items,artistNextOffset(offset,raw.length(),total),
             total.takeIf { it>=0 } ?: (offset+raw.length()))
@@ -58,7 +59,13 @@ class QQMusicArtistRepository(private val accounts: QQMusicAccountRepository, pr
         val mid=artist.id.removePrefix("artist:")
         requireArtistRequest(mid,0)
         val introduction=async {
-            optional {
+            val full=optional {
+                val url="https://c.y.qq.com/splcloud/fcgi-bin/fcg_get_singer_desc.fcg".toHttpUrl().newBuilder()
+                    .addQueryParameter("singermid",mid).addQueryParameter("utf8","1")
+                    .addQueryParameter("outCharset","utf-8").addQueryParameter("format","xml").build()
+                parseQQArtistBiography(client.getText(url.toString()))
+            }
+            full?.takeIf(String::isNotBlank) ?: optional {
                 request("music.UnifiedHomepage.UnifiedHomepageSrv","GetHomepageTabDetail",
                     JSONObject().put("SingerMid",mid).put("IsQueryTabDetail",1).put("TabID","wiki")
                         .put("PageNum",0).put("PageSize",10).put("Order",0))
@@ -83,13 +90,16 @@ private fun artistNextOffset(offset: Int, count: Int, total: Int): Int? = (offse
     count>0 && if(total>=0) it<total else count>=50
 }
 
-internal fun qqArtistAlbum(value: JSONObject): QQMusicPlaylist? {
+internal fun qqArtistAlbum(value: JSONObject, wrapper: JSONObject = value): QQMusicPlaylist? {
     val mid=value.artistText("albumMid","album_mid","mid")
     val name=value.artistText("albumName","album_name","name")
     if(!validQQCollectionMid(mid) || name.isBlank()) return null
     return QQMusicPlaylist("album:$mid",name,
         value.artistText("albumPic","picUrl").qqArtistImage() ?: "https://y.gtimg.cn/music/photo_new/T002R500x500M000$mid.jpg",
-        maxOf(value.optInt("songNum",0),value.optInt("song_count",0),value.optInt("songnum",0)))
+        listOf(value,wrapper).maxOf { album ->
+            listOf("totalNum","songNum","song_count","songnum","song_num","total_song_num")
+                .maxOf { album.optInt(it,-1) }
+        })
 }
 
 internal fun validQQCollectionMid(mid: String): Boolean =
@@ -110,8 +120,9 @@ internal fun parseQQArtistProfile(artist: QQMusicPlaylist, header: JSONObject, i
     val mid=artist.id.removePrefix("artist:")
     val singer=header.optJSONObject("Singer")
     val base=header.optJSONObject("BaseInfo")
-    val avatar=base?.artistText("Avatar")?.qqArtistImage() ?: singer?.artistText("SingerPic")?.qqArtistImage()
-        ?: artist.cover ?: "https://y.gtimg.cn/music/photo_new/T001R300x300M000$mid.jpg"
+    // BaseInfo.Avatar can be the viewer's QQ account avatar, not the singer artwork.
+    val avatar=artist.cover?.qqArtistImage() ?: singer?.artistText("SingerPic")?.qqArtistImage()
+        ?: "https://y.gtimg.cn/music/photo_new/T001R300x300M000$mid.jpg"
     val photos=singer?.optJSONArray("SingerImageLists")
     var background=base?.artistText("BackgroundImage")?.qqArtistImage()
     if(background==null && photos!=null) for(i in 0 until photos.length()) {

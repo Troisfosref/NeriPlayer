@@ -9,6 +9,18 @@ import moe.ouom.neriplayer.navigation.Destinations
 import moe.ouom.neriplayer.ui.viewmodel.tab.YouTubeMusicPlaylist
 import moe.ouom.neriplayer.ui.navigation.biliUploaderSourceRoute
 import moe.ouom.neriplayer.ui.navigation.navigationGson
+import moe.ouom.neriplayer.platform.qqmusic.QQMusicPlaylist
+import moe.ouom.neriplayer.ui.screen.qqmusic.qqPlaylistRoute
+
+internal fun NavHostController.navigateToQQMusicCollection(collection: QQMusicPlaylist) {
+    val current=currentBackStackEntry?.takeIf { it.destination.route=="qq_playlist_detail/{playlistJson}" }
+    val same=current?.arguments?.getString("playlistJson")?.let {
+        runCatching { navigationGson.fromJson(it,QQMusicPlaylist::class.java)?.id==collection.id }.getOrDefault(false)
+    } == true
+    if(same) return
+    // Albums and artists share a destination pattern. singleTop would replace the artist entry.
+    navigate(qqPlaylistRoute(collection))
+}
 
 internal fun NavHostController.navigateToNeteaseArtist(artist: NeteaseArtistSummary) {
     val json = Uri.encode(navigationGson.toJson(artist))

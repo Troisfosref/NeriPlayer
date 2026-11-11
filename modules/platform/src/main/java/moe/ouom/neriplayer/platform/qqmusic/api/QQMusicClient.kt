@@ -114,20 +114,31 @@ class QQMusicClient(private val client: OkHttpClient) {
         .header("Referer", "https://y.qq.com/portal/search.html")
         .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36").build())
 
+    internal suspend fun getText(url: String): String = executeText(request(url, "").build())
+
     private fun request(url: String, cookie: String): Request.Builder = Request.Builder().url(url)
         .header("Referer", "https://y.qq.com/").header("User-Agent", "QQMusic 14090008(android 14)")
         .apply { if (cookie.isNotBlank()) header("Cookie", cookie) }
 
+    private suspend fun executeText(request: Request): String = client.newCall(request).awaitResponse {
+        requireHttpSuccess(it.code)
+        it.body.string()
+    }
+
     private suspend fun execute(request: Request): JSONObject = client.newCall(request).awaitResponse {
-        if (!it.isSuccessful) throw QQMusicException(when(it.code) {
-            401 -> QQMusicException.Kind.LOGIN_REQUIRED
-            403, 429 -> QQMusicException.Kind.VERIFICATION_REQUIRED
-            else -> QQMusicException.Kind.REQUEST_FAILED
-        })
+        requireHttpSuccess(it.code)
         val raw = it.body.string().trim()
         // Legacy search may wrap JSON in a callback; never evaluate that callback.
         try { JSONObject(raw.substring(raw.indexOf('{'), raw.lastIndexOf('}') + 1)) }
         catch (cancelled: CancellationException) { throw cancelled }
         catch (_: Exception) { throw QQMusicException(QQMusicException.Kind.REQUEST_FAILED) }
+    }
+
+    private fun requireHttpSuccess(code: Int) {
+        if(code !in 200..299) throw QQMusicException(when(code) {
+            401 -> QQMusicException.Kind.LOGIN_REQUIRED
+            403,429 -> QQMusicException.Kind.VERIFICATION_REQUIRED
+            else -> QQMusicException.Kind.REQUEST_FAILED
+        })
     }
 }

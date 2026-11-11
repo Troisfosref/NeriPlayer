@@ -176,7 +176,8 @@ internal fun ArtistAlbumRow(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
-                Text(
+                // Some providers omit the count; a negative size means unknown, not an empty album.
+                if(album.size>=0) Text(
                     text = pluralStringResource(AppR.plurals.count_songs_format, album.size, album.size),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant

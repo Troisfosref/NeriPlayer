@@ -19,6 +19,9 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performSemanticsAction
+import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.text.TextLayoutResult
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import moe.ouom.neriplayer.common.R as CoreCommonR
@@ -213,12 +216,37 @@ class NeteaseArtistDetailContentTest {
     }
 
     @Test
-    fun `shared artist layout can hide unsupported follow and opens the full introduction`() {
+    fun `shared artist layout can hide unsupported follow and expand the introduction inline`() {
         setContent { NeteaseArtistDetailUiState(loading=false,header=header.copy(canFollow=false),songs=songs) }
         composeRule.onNodeWithText(string(CoreCommonR.string.artist_follow)).assertDoesNotExist()
         composeRule.onNodeWithText(header.briefDesc).performClick()
-        composeRule.onNodeWithText(string(CoreCommonR.string.action_close)).assertExists().performClick()
+        composeRule.onNodeWithText(string(CoreCommonR.string.action_collapse)).assertExists().performClick()
         composeRule.onNodeWithText(string(CoreCommonR.string.artist_tab_albums)).assertExists()
+    }
+
+    @Test
+    fun `long introduction has an explicit expand button and removes the line limit`() {
+        val biography="A long introduction with several paragraphs. ".repeat(80)+"LAST_PARAGRAPH"
+        setContent { NeteaseArtistDetailUiState(loading=false,header=header.copy(briefDesc=biography)) }
+        fun layout(): TextLayoutResult {
+            val results=mutableListOf<TextLayoutResult>()
+            composeRule.onNodeWithText(biography).performSemanticsAction(SemanticsActions.GetTextLayoutResult) { it(results) }
+            return results.single()
+        }
+        org.junit.Assert.assertTrue(layout().hasVisualOverflow)
+        composeRule.onNodeWithText(string(CoreCommonR.string.action_expand)).assertExists().performClick()
+        composeRule.onNodeWithText(string(CoreCommonR.string.action_collapse)).assertExists()
+        org.junit.Assert.assertFalse(layout().hasVisualOverflow)
+    }
+
+    @Test
+    fun `unknown album count is hidden while the actual count still renders`() {
+        setContent { NeteaseArtistDetailUiState(loading=false,header=header,
+            albums=listOf(AlbumSummary(1L,"Unknown count","",-1),AlbumSummary(2L,"Known count","",12))) }
+        composeRule.onNodeWithText(string(CoreCommonR.string.artist_tab_albums)).performClick()
+        composeRule.onNodeWithText("Unknown count").assertExists()
+        composeRule.onNodeWithText(plural(AppR.plurals.count_songs_format,0)).assertDoesNotExist()
+        composeRule.onNodeWithText(plural(AppR.plurals.count_songs_format,12)).assertExists()
     }
 
     private fun setContent(ui: () -> NeteaseArtistDetailUiState) {

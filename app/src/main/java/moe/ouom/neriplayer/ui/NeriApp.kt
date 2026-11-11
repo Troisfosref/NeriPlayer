@@ -1682,9 +1682,7 @@ private fun NeriAppContent(
             CompositionLocalProvider(
                 moe.ouom.neriplayer.ui.screen.qqmusic.LocalQQPlaylistOpen provides { playlist ->
                     showNowPlaying = false
-                    navController.navigate(moe.ouom.neriplayer.ui.screen.qqmusic.qqPlaylistRoute(playlist)) {
-                        launchSingleTop = true
-                    }
+                    navController.navigateToQQMusicCollection(playlist)
                 },
                 LocalSharedCoverFlight provides sharedCoverFlight,
                 LocalHasCustomBackground provides hasCustomBackground,

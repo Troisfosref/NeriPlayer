@@ -16,7 +16,8 @@ data class QQMusicArtistSnapshot(val profile: QQMusicArtistProfile,
 
 class QQMusicArtistCacheRepository(private val store: PlatformPlaylistCacheRoomStore) {
     suspend fun read(mid: String): QQMusicCacheSnapshot<QQMusicArtistSnapshot>? = withContext(Dispatchers.IO) {
-        store.read(QQMusicBrowseCacheRepository.PLATFORM,"0:artist:$mid")?.let {
+        store.read(QQMusicBrowseCacheRepository.PLATFORM,"0:artist:$mid")
+            ?.takeIf { it.signatureSecondary==QQ_ARTIST_CACHE_VERSION }?.let {
             val snapshot=it.artistSnapshot()
             require(snapshot.profile.mid==mid)
             QQMusicCacheSnapshot(snapshot,it.savedAtMs)
@@ -35,8 +36,10 @@ internal fun QQMusicArtistSnapshot.artistCacheRecord(now: Long): PlatformPlaylis
     return qqMusicTrackCacheRecord(0L,"",songs.items,0,now).copy(
         cacheKey="0:artist:${p.mid}",kind="artist",subtitle=meta.toString(),
         sourceId=songs.nextOffset?.toLong(),playCount=albums.nextOffset?.toLong(),
-        totalCount=songs.total,signaturePrimary=albums.total.toString())
+        totalCount=songs.total,signaturePrimary=albums.total.toString(),signatureSecondary=QQ_ARTIST_CACHE_VERSION)
 }
+
+private const val QQ_ARTIST_CACHE_VERSION = "2"
 
 internal fun PlatformPlaylistCacheRecord.artistSnapshot(): QQMusicArtistSnapshot {
     val meta=JSONObject(requireNotNull(subtitle))

@@ -610,23 +610,20 @@ private fun ArtistBriefDescription(header: NeteaseArtistHeader?, maxLines: Int) 
     val briefDesc = artist.briefDesc
     if (briefDesc.isBlank()) return
     var expanded by rememberSaveable(artist.id, briefDesc) { mutableStateOf(false) }
+    var overflows by rememberSaveable(artist.id, briefDesc, maxLines) { mutableStateOf(false) }
     Spacer(Modifier.height(10.dp))
     Text(
         text = briefDesc,
         style = MaterialTheme.typography.bodyMedium,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
-        maxLines = maxLines,
-        overflow = TextOverflow.Ellipsis,
-        modifier = Modifier.clickable { expanded = true }
+        maxLines = if(expanded) Int.MAX_VALUE else maxLines,
+        overflow = if(expanded) TextOverflow.Clip else TextOverflow.Ellipsis,
+        onTextLayout = { if(!expanded) overflows=it.hasVisualOverflow },
+        modifier = Modifier.clickable { expanded = !expanded }
     )
-    if (expanded) moe.ouom.neriplayer.ui.component.overlay.DensityScaledAlertDialog(
-        onDismissRequest = { expanded = false },
-        title = { Text(artist.name) },
-        text = { Text(briefDesc, Modifier.verticalScroll(rememberScrollState())) },
-        confirmButton = { androidx.compose.material3.TextButton(onClick = { expanded = false }) {
-            Text(stringResource(CoreCommonR.string.action_close))
-        } }
-    )
+    if(expanded || overflows) androidx.compose.material3.TextButton(onClick={expanded=!expanded}) {
+        Text(stringResource(if(expanded) CoreCommonR.string.action_collapse else CoreCommonR.string.action_expand))
+    }
 }
 
 @Composable
