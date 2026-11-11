@@ -48,7 +48,7 @@ private fun recognizeLinkForHost(host: String, uri: URI, normalized: String): Ex
             val mid = params["songmid"] ?: uri.path?.substringAfter("/songDetail/", "")?.substringBefore('/')
             mid?.takeIf { it.matches(Regex("[A-Za-z0-9]{1,64}")) }?.let { ExploreLinkTarget.QQMusicSong(it) }
         }
-        host.endsWith("music.163.com") -> recognizeNeteaseLink(uri)
+        host.isPlatformHost("music.163.com") -> recognizeNeteaseLink(uri)
         host == "163cn.tv" -> ExploreLinkTarget.NeteaseShortLink(normalized)
         isBiliHost(host) -> recognizeBiliLink(uri, normalized)
         isYouTubeHost(host) -> recognizeYouTubeLink(uri)
@@ -56,10 +56,12 @@ private fun recognizeLinkForHost(host: String, uri: URI, normalized: String): Ex
     }
 }
 
-private fun isBiliHost(host: String): Boolean = host.endsWith("bilibili.com") || host == "b23.tv"
+private fun String.isPlatformHost(domain: String): Boolean = this == domain || endsWith(".$domain")
+
+private fun isBiliHost(host: String): Boolean = host.isPlatformHost("bilibili.com") || host == "b23.tv"
 
 private fun isYouTubeHost(host: String): Boolean {
-    return host == "youtu.be" || host.endsWith("youtube.com") || host.endsWith("youtube-nocookie.com")
+    return host == "youtu.be" || host.isPlatformHost("youtube.com") || host.isPlatformHost("youtube-nocookie.com")
 }
 
 private fun recognizeNeteaseLink(uri: URI): ExploreLinkTarget? {

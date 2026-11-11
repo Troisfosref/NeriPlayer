@@ -45,13 +45,18 @@ class QQMusicBrowseRepository(private val accounts: QQMusicAccountRepository, pr
     }
     suspend fun created(): List<QQMusicPlaylist> {
         val c=credentials(); val id=qqAccountId(c); val result=mutableListOf<QQMusicPlaylist>(); var offset=0
+        val seenIds = mutableSetOf<String>()
         while (true) {
             val data=web("https://c.y.qq.com/rsc/fcgi-bin/fcg_user_created_diss",mapOf("hostuin" to id,"sin" to "$offset","size" to "100","format" to "json"),c).optJSONObject("data") ?: break
             val modern=data.optJSONArray("disslist");val legacy=data.optJSONArray("list")
             val count=maxOf(modern?.length() ?: 0,legacy?.length() ?: 0)
             val raw=JSONArray().apply { (modern.objects()+legacy.objects()).forEach { put(it) } }
             val page=raw.objects().mapNotNull(::qqBrowsePlaylist)
-            if(offset>0 && raw.length()>0 && page.all { p -> result.any { it.id==p.id } }) throw QQMusicException(QQMusicException.Kind.REQUEST_FAILED)
+            if (offset > 0 && raw.length() > 0 && page.none { it.id !in seenIds }) {
+                throw QQMusicException(QQMusicException.Kind.REQUEST_FAILED)
+            }
+            // Hidden system folders still count towards upstream pagination progress.
+            seenIds += page.map { it.id }
             result += page.filter { !isQQHiddenSystemPlaylist(it) }
             if (count<100) break
             offset+=count

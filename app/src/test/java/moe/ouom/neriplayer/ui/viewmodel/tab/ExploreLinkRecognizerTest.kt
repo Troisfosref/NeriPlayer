@@ -9,6 +9,19 @@ import org.junit.Assert.assertNull
 import org.junit.Test
 
 class ExploreLinkRecognizerTest {
+    @Test
+    fun `lookalike platform domains are rejected while real official subdomains are retained`() {
+        for (url in listOf(
+            "https://evilbilibili.com/video/BV1rXNY6CE2u/",
+            "https://notyoutube.com/watch?v=dQw4w9WgXcQ",
+            "https://notmusic.163.com/song?id=42",
+            "https://y.qq.com.example.invalid/n/ryqq/songDetail/catalogMid"
+        )) assertNull(url, recognizeExploreLink(url))
+        assertEquals(ExploreLinkTarget.YouTubeVideo("dQw4w9WgXcQ"),
+            recognizeExploreLink("https://m.youtube.com/watch?v=dQw4w9WgXcQ"))
+        assertEquals(ExploreLinkTarget.NeteaseSong(42), recognizeExploreLink("https://music.163.com/song?id=42"))
+    }
+
 
     @Test
     fun `share text extracts Bilibili short link`() {

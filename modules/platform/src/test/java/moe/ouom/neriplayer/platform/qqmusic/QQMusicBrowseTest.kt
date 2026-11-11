@@ -2,6 +2,7 @@ package moe.ouom.neriplayer.platform.qqmusic
 
 import kotlinx.coroutines.runBlocking
 import moe.ouom.neriplayer.platform.qqmusic.api.QQMusicClient
+import moe.ouom.neriplayer.platform.qqmusic.api.QQMusicException
 import moe.ouom.neriplayer.platform.qqmusic.auth.QQMusicAccountRepository
 import okhttp3.*
 import okhttp3.ResponseBody.Companion.toResponseBody
@@ -12,6 +13,28 @@ import org.junit.Test
 import org.mockito.Mockito
 
 class QQMusicBrowseTest {
+    @Test fun `repeated created page containing a hidden QZone folder still stops pagination`() = runBlocking {
+        val accounts = Mockito.mock(QQMusicAccountRepository::class.java)
+        Mockito.`when`(accounts.cookie()).thenReturn("musicid=123; musickey=fixture")
+        val list = JSONArray().apply {
+            repeat(100) { index -> put(JSONObject().put("dissid", 1000 + index)
+                .put("diss_name", if (index == 0) "QZone背景音乐" else "List $index")) }
+        }
+        var calls = 0
+        val http = OkHttpClient.Builder().addInterceptor { chain ->
+            calls++
+            assertTrue("Repeating hidden folders must not bypass the progress guard", calls <= 2)
+            val body = JSONObject().put("code", 0).put("data", JSONObject().put("disslist", list))
+            Response.Builder().request(chain.request()).protocol(Protocol.HTTP_1_1).code(200).message("OK")
+                .body(body.toString().toResponseBody()).build()
+        }.build()
+        try {
+            QQMusicBrowseRepository(accounts, QQMusicClient(http)).created()
+            fail("Repeated page must fail for retry")
+        } catch (_: QQMusicException) { }
+        assertEquals(2, calls)
+    }
+
     @Test fun `QZone system playlist is hidden regardless of name case or spacing`() {
         for (title in listOf("QZone背景音乐", "Qzone背景音乐", "qzone背景音乐", " QZone 背景音乐 ")) {
             assertTrue(isQQHiddenSystemPlaylist(QQMusicPlaylist("42", title)))

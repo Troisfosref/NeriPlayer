@@ -112,7 +112,8 @@ jobs:
             :playback:logic:testDebugUnitTest --tests '*PlaybackQualityOwnerTest' \
             :app:testDebugUnitTest --tests '*SettingsAccountProfilesTest' --tests '*SettingsAccountProfileNormalizationTest' \
             --tests '*QQMusicSearchIntegrationTest' --tests '*QQMusicCollectionFavoritesTest' --tests '*ExploreScreenYouTubeGateTest' \
-            --tests '*ExploreSearchPaginationTest' --tests '*ExploreSearchHistoryDisplayTest' \
+            --tests '*ExploreSearchPaginationTest' --tests '*ExploreSearchHistoryDisplayTest' --tests '*ExploreLinkRecognizerTest' \
+            :download:runtime:testDebugUnitTest --tests '*QQMusicDownloadLyricsTest' \
             :app:assembleRelease -PallowUnsignedRelease=true --warning-mode all --stacktrace
 
       - name: Sign compiled APK (trusted branch only)
@@ -189,4 +190,5 @@ jobs:
             modules/lyrics/build/test-results/testDebugUnitTest/**
             modules/playback/logic/build/test-results/testDebugUnitTest/**
             app/build/test-results/testDebugUnitTest/**
+            modules/download/runtime/build/test-results/testDebugUnitTest/**
           if-no-files-found: ignore
