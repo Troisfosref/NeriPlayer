@@ -118,7 +118,6 @@ import moe.ouom.neriplayer.ui.viewmodel.nowplaying.NowPlayingNeteasePlaylistOwne
 import moe.ouom.neriplayer.ui.viewmodel.nowplaying.canCollectToNeteasePlaylist
 import moe.ouom.neriplayer.ui.component.playlist.NeteaseRemotePlaylistPickerDialog
 import moe.ouom.neriplayer.ui.viewmodel.album.isNeteaseAlbumNavigationSource
-import moe.ouom.neriplayer.ui.viewmodel.album.neteaseAlbumDisplayName
 import moe.ouom.neriplayer.ui.viewmodel.album.resolveNeteaseAlbum
 import moe.ouom.neriplayer.ui.viewmodel.tab.AlbumSummary
 import moe.ouom.neriplayer.util.media.buildRemoteSongShareUrl
@@ -522,7 +521,6 @@ private fun NeteaseAlbumAction(
 ) {
     if (!isNeteaseAlbumNavigationSource(song)) return
 
-    val albumName = neteaseAlbumDisplayName(song)
     val composeResources = LocalResources.current
     var albumResolveRequest by remember(song) { mutableIntStateOf(0) }
     var resolvingAlbum by remember(song) { mutableStateOf(false) }
@@ -546,7 +544,7 @@ private fun NeteaseAlbumAction(
     }
 
     MoreOptionsItem(
-        title = stringResource(CoreCommonR.string.music_view_album, albumName),
+        title = stringResource(CoreCommonR.string.music_view_album),
         icon = Icons.Outlined.LibraryMusic,
         hue = MoreHuePurple,
         enabled = !resolvingAlbum,
@@ -797,7 +795,7 @@ private fun QQMusicNavigationActions(song: SongItem,offlineMode: Boolean,isDismi
     val navigation=moe.ouom.neriplayer.ui.screen.qqmusic.rememberQQMusicSongNavigation(song,offlineMode,snackbar) { target ->
         onDismissSheet { open(target) }
     }
-    MoreOptionsItem(title=stringResource(CoreCommonR.string.music_view_album,song.album),
+    MoreOptionsItem(title=stringResource(CoreCommonR.string.music_view_album),
         icon=Icons.Outlined.LibraryMusic,hue=MoreHuePurple,enabled=!isDismissing && !navigation.busy,
         busy=navigation.busy,onClick=navigation.openAlbum)
     MoreOptionsItem(title=stringResource(CoreCommonR.string.qq_view_artist),
@@ -810,20 +808,11 @@ private fun QQMusicCollectionAction(song: SongItem, disabled: Boolean, snackbar:
     if (QQMusicSongRef.from(song) == null || song.isLocalSong()) return
     val scope = rememberCoroutineScope()
     val resources = LocalResources.current
-    var busy by remember(song.stableKey()) { mutableStateOf(false) }
-    MoreOptionsItem(title=stringResource(CoreCommonR.string.qq_add_liked),
-        icon=Icons.Outlined.FavoriteBorder,hue=MoreHueRed,busy=busy,enabled=!disabled && !busy,
-        onClick={scope.launch {
-            busy=true
-            val message = try {
-                AppContainer.qqMusicRepository.setLiked(song,true)
-                CoreCommonR.string.qq_add_liked_success
-            } catch(c:CancellationException){throw c}
-            catch(error:Exception){
-                if((error as? moe.ouom.neriplayer.platform.qqmusic.api.QQMusicException)?.kind ==
-                    moe.ouom.neriplayer.platform.qqmusic.api.QQMusicException.Kind.LOGIN_REQUIRED)
-                    CoreCommonR.string.qq_music_login_required else CoreCommonR.string.qq_action_failed
-            } finally {busy=false}
-            snackbar.showNeriSnackbar(resources.getString(message))
-        }})
+    var showPicker by remember(song.stableKey()) { mutableStateOf(false) }
+    MoreOptionsItem(title=stringResource(CoreCommonR.string.qq_playlist_add),
+        icon=Icons.AutoMirrored.Outlined.PlaylistAdd,hue=MoreHueRed,enabled=!disabled,
+        onClick={showPicker=true})
+    if (showPicker) moe.ouom.neriplayer.ui.screen.qqmusic.QQMusicPlaylistPicker(
+        songs=listOf(song), onDismiss={showPicker=false},
+        onAdded={scope.launch { snackbar.showNeriSnackbar(resources.getString(CoreCommonR.string.qq_playlist_added)) }})
 }

@@ -33,5 +33,5 @@
     <string name="cover_preview_zoom_hint">Pinch to zoom · Drag to explore</string>
     <string name="cover_preview_zoom_percent">%1$d%%</string>
     <string name="cover_preview_reset_zoom">Reset zoom</string>
-    <string name="music_view_album">View Album %s</string>
+    <string name="music_view_album">View Album</string>
 </resources>

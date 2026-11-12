@@ -28,7 +28,6 @@ class QQMusicBrowseViewModel : ViewModel() {
     private val libraryRequested = MutableStateFlow(0)
     private val homeRequested = MutableStateFlow(false)
     private var librarySession: Long? = null
-    private var lastLibraryRefresh = 0
     private data class LibraryRequest(val session: Long, val signedIn: Boolean, val requested: Boolean,
                                       val refresh: Int, val libraryRevision: Int)
     fun requestLibrary() { libraryRequested.update { it + 1 } }
@@ -40,8 +39,6 @@ class QQMusicBrowseViewModel : ViewModel() {
                 combine(account, revision, libraryRequested, accounts.libraryRevision) { a, refresh, requested, change ->
                     LibraryRequest(a.savedAt, a.signedIn, requested > 0, refresh, change)
                 }.collectLatest { request ->
-                    val force = request.refresh != lastLibraryRefresh
-                    lastLibraryRefresh = request.refresh
                     if (!request.requested || !request.signedIn) {
                         librarySession=null
                         liked.value=QQLoad(loading=false);created.value=QQLoad(loading=false);collected.value=QQLoad(loading=false)
@@ -53,14 +50,14 @@ class QQMusicBrowseViewModel : ViewModel() {
                     }
                     coroutineScope {
                         val session=request.session; val change=request.libraryRevision
-                        launch { loadQQMusicCachedData(force, change,
+                        launch { loadQQMusicCachedData(true, change,
                             read={cache.readLibrary(session,"liked")?.map { it.single() }},
                             fetch={repository.liked()}, save={cache.saveLibrary(session,"liked",listOf(it),change)},
                             publish={liked.value=it}) }
-                        launch { loadQQMusicCachedData(force, change,
+                        launch { loadQQMusicCachedData(true, change,
                             read={cache.readLibrary(session,"created")}, fetch={repository.created()},
                             save={cache.saveLibrary(session,"created",it,change)}, publish={created.value=it}) }
-                        launch { loadQQMusicCachedData(force, change,
+                        launch { loadQQMusicCachedData(true, change,
                             read={cache.readLibrary(session,"collected")}, fetch={repository.collected()},
                             save={cache.saveLibrary(session,"collected",it,change)}, publish={collected.value=it}) }
                     }
@@ -85,7 +82,7 @@ class QQMusicBrowseViewModel : ViewModel() {
                              publish: (QQLoad<List<SongItem>>) -> Unit) {
         val isPublic = playlist.id.startsWith("album:") || playlist.id.startsWith("artist:")
         val session = if (isPublic) 0L else account.value.savedAt
-        loadQQMusicCachedData(force, change,
+        loadQQMusicCachedData(force || !isPublic, change,
             read={cache.readTracks(session,playlist.id)},
             fetch={
                 when(playlist.id) {

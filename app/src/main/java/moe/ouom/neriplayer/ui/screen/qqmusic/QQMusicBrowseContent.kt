@@ -42,7 +42,7 @@ fun QQMusicLibraryContent(
     onCategoryChange: () -> Unit = {},
     vm: QQMusicBrowseViewModel = viewModel()
 ) {
-    LaunchedEffect(vm) { vm.requestLibrary() }
+    androidx.lifecycle.compose.LifecycleEventEffect(androidx.lifecycle.Lifecycle.Event.ON_RESUME) { vm.requestLibrary() }
     val account by vm.account.collectAsStateWithLifecycle()
     val liked by vm.liked.collectAsStateWithLifecycle()
     val created by vm.created.collectAsStateWithLifecycle()

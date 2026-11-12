@@ -37,6 +37,14 @@ class QQMusicBrowseCacheRepository(private val store: PlatformPlaylistCacheRoomS
             save(qqMusicTrackCacheRecord(session, id, songs, revision, System.currentTimeMillis()))
         }
 
+    /** Invalidate both library summaries and directory/public aliases after a cloud write. */
+    suspend fun invalidatePlaylist(playlist: QQMusicPlaylist) = withContext(Dispatchers.IO) {
+        val ids = setOfNotNull(playlist.id, playlist.directory?.let { "dir:$it" })
+        store.clearWhere(PLATFORM) { entity ->
+            entity.kind == "library" || ids.any { entity.cacheKey.endsWith(":tracks:$it") }
+        }
+    }
+
     private suspend fun save(record: PlatformPlaylistCacheRecord) =
         store.replaceBounded(record, maxRecords = 100, maxTracks = 50_000)
 

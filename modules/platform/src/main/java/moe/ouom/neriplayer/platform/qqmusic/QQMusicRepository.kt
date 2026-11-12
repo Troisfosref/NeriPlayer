@@ -39,23 +39,10 @@ class QQMusicRepository(
             if (total >= 0) page * 30 < total else list.length() >= 30)
     }
 
-    /** QQ mutations require the catalog's numeric id, never our local compatibility hash. */
     suspend fun setLiked(song: SongItem, liked: Boolean) {
-        val ref = QQMusicSongRef.from(song) ?: throw QQMusicException(QQMusicException.Kind.REQUEST_FAILED)
-        val cookie = accounts.cookie()
-        if (cookie.isBlank()) throw QQMusicException(QQMusicException.Kind.LOGIN_REQUIRED)
-        val detail = client.songDetail(ref.mid, cookie)
-        val songId = detail.optLong("id", detail.optLong("songid", 0))
-        if (songId <= 0) throw QQMusicException(QQMusicException.Kind.REQUEST_FAILED)
-        val result = client.post("req_0", "music.musicasset.PlaylistDetailWrite",
-            if (liked) "AddSonglist" else "DelSonglist",
-            JSONObject().put("dirId", 201).put("tid", 0).put("bFmtUtf8", true).put("source", "normal")
-                .put("v_songInfo", JSONArray().put(JSONObject().put("songId", songId)
-                    .put("songType", detail.optInt("type", ref.songType)))), cookie)
-        val code = result.optInt("retCode", -1)
-        if (!result.has("retCode") || code != 0) throw QQMusicException(
-            QQMusicException.Kind.REQUEST_FAILED, code.takeIf { it > 0 }?.toString())
-        accounts.notifyLibraryChanged()
+        val result = moe.ouom.neriplayer.platform.qqmusic.playlist.QQMusicPlaylistEditor(accounts, client)
+            .update("favorites", listOf(song), liked)
+        result.error?.let { throw it }
     }
 
     suspend fun playback(song: SongItem, preferredQualityOverride: QQMusicQuality? = null): SongUrlResult.Success = ticketMutex.withLock {

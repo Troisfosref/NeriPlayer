@@ -12,7 +12,7 @@ import org.junit.Test
 import org.mockito.Mockito
 
 class QQMusicFavoriteTest {
-    @Test fun `cloud likes use real catalog id and are invalidated only after confirmed success`() = runBlocking {
+    @Test fun `cloud likes use real catalog id and invalidate after a write even when the acknowledgement is lost`() = runBlocking {
         val calls=mutableListOf<JSONObject>()
         var retCode:Int?=0
         val http=OkHttpClient.Builder().addInterceptor { chain ->
@@ -37,6 +37,6 @@ class QQMusicFavoriteTest {
         retCode=null
         try {repo.setLiked(song,false);fail("Missing acknowledgement must fail")}
         catch(e:QQMusicException){assertEquals(QQMusicException.Kind.REQUEST_FAILED,e.kind)}
-        Mockito.verify(accounts,Mockito.times(1)).notifyLibraryChanged()
+        Mockito.verify(accounts,Mockito.times(2)).notifyLibraryChanged()
     }
 }

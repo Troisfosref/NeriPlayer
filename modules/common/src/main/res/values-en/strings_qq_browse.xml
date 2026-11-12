@@ -18,8 +18,6 @@
   <string name="qq_quality_default">QQ Music default quality</string>
   <string name="qq_quality_mobile">QQ Music mobile data quality</string>
   <string name="qq_action_failed">Action failed. Please try again.</string>
-  <string name="qq_add_liked">Add to QQ Music likes</string>
-  <string name="qq_add_liked_success">Added to QQ Music likes</string>
   <string name="qq_quality_download">QQ Music download quality</string>
   <string name="qq_account_signed_in">Signed in</string>
   <string name="qq_account_id">Account: %1$s</string>
@@ -28,4 +26,16 @@
   <string name="qq_favorite_album">QQ Music album</string>
   <string name="qq_view_artist">View artist</string>
   <string name="qq_navigation_failed">Could not load QQ Music album or artist information</string>
+  <string name="qq_playlist_add">Add to playlist</string>
+  <string name="qq_playlist_picker">Add to QQ Music playlist</string>
+  <string name="qq_playlist_loading">Loading playlists</string>
+  <string name="qq_playlist_updating">Syncing songs</string>
+  <string name="qq_playlist_added">Added to QQ Music playlist</string>
+  <string name="qq_playlist_remove">Remove songs</string>
+  <string name="qq_playlist_remove_title">Remove from QQ Music playlist</string>
+  <string name="qq_playlist_remove_message">Remove %1$d selected songs from this playlist and sync to QQ Music.</string>
+  <string name="qq_playlist_removed">Removed from QQ Music playlist</string>
+  <string name="qq_playlist_partial">Completed %1$d/%2$d songs. Refresh and retry the remaining songs.</string>
+  <string name="qq_playlist_retry">Retry</string>
+  <string name="qq_playlist_select">Select songs</string>
 </resources>

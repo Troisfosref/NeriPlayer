@@ -291,6 +291,11 @@ object AppContainer {
             moe.ouom.neriplayer.data.local.database.store.PlatformPlaylistCacheRoomStore(
                 moe.ouom.neriplayer.data.local.database.NeriUserDataDatabase.getInstance(application)))
     }
+    val qqMusicPlaylistEditor by lazy {
+        moe.ouom.neriplayer.platform.qqmusic.playlist.QQMusicPlaylistEditor(qqMusicAccounts,
+            moe.ouom.neriplayer.platform.qqmusic.api.QQMusicClient(sharedOkHttpClient),
+            qqMusicBrowseCache::invalidatePlaylist)
+    }
     val qqMusicRepository by lazy {
         moe.ouom.neriplayer.platform.qqmusic.QQMusicRepository(qqMusicAccounts,
             moe.ouom.neriplayer.platform.qqmusic.api.QQMusicClient(sharedOkHttpClient))

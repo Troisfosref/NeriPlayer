@@ -39,7 +39,7 @@ class QQMusicBrowseRepository(private val accounts: QQMusicAccountRepository, pr
             c, commOverride = comm)
         val first = qqBrowseSongs(data.optJSONArray("songlist")).firstOrNull()
         return QQMusicPlaylist(
-            id = "favorites", title = "我喜欢的音乐", cover = first?.coverUrl,
+            id = "favorites", title = "我喜欢", cover = first?.coverUrl,
             count = data.optInt("total_song_num", 0).coerceAtLeast(0), directory = 201
         )
     }
@@ -123,7 +123,7 @@ internal fun JSONObject.text(vararg names: String): String = names.firstNotNullO
 internal fun String.https(): String = if(startsWith("//")) "https:$this" else replaceFirst("http://","https://")
 internal fun JSONArray?.objects(): List<JSONObject> = if(this==null) emptyList() else (0 until length()).mapNotNull { optJSONObject(it) }
 internal fun qqBrowsePlaylist(j: JSONObject): QQMusicPlaylist? {
-    val directory=j.optInt("dirid").takeIf { it>0 }
+    val directory=j.optInt("dirid", j.optInt("dirId")).takeIf { it>0 }
     val id=j.text("tid","dissid","id").ifBlank { directory?.let { "dir:$it" }.orEmpty() }
     val name=j.text("title","diss_name","dissname","name")
     if(id.isBlank() || name.isBlank())return null

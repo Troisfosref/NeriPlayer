@@ -1,7 +1,7 @@
 <resources>
   <string name="qq_browse_login">请先在设置中登录 QQ 音乐</string>
   <string name="qq_browse_refresh">刷新</string>
-  <string name="qq_browse_liked">我喜欢的音乐</string>
+  <string name="qq_browse_liked">我喜欢</string>
   <string name="qq_browse_created">自建歌单</string>
   <string name="qq_browse_collected">收藏歌单</string>
   <string name="qq_browse_daily">每日推荐</string>
@@ -18,8 +18,6 @@
   <string name="qq_quality_default">QQ 音乐默认音质</string>
   <string name="qq_quality_mobile">QQ 音乐流量音质</string>
   <string name="qq_action_failed">操作失败，请重试</string>
-  <string name="qq_add_liked">收藏到 QQ 音乐我喜欢</string>
-  <string name="qq_add_liked_success">已加入 QQ 音乐我喜欢</string>
   <string name="qq_quality_download">QQ 音乐下载音质</string>
   <string name="qq_account_signed_in">已登录</string>
   <string name="qq_account_id">账号：%1$s</string>
@@ -28,4 +26,16 @@
   <string name="qq_favorite_album">QQ 音乐专辑</string>
   <string name="qq_view_artist">查看歌手</string>
   <string name="qq_navigation_failed">暂时无法获取 QQ 音乐的专辑或歌手信息</string>
+  <string name="qq_playlist_add">添加到歌单</string>
+  <string name="qq_playlist_picker">添加到 QQ 音乐歌单</string>
+  <string name="qq_playlist_loading">正在加载歌单</string>
+  <string name="qq_playlist_updating">正在同步歌曲</string>
+  <string name="qq_playlist_added">已添加到 QQ 音乐歌单</string>
+  <string name="qq_playlist_remove">移除歌曲</string>
+  <string name="qq_playlist_remove_title">从 QQ 音乐歌单移除</string>
+  <string name="qq_playlist_remove_message">将所选 %1$d 首歌曲从此歌单移除，并同步到 QQ 音乐。</string>
+  <string name="qq_playlist_removed">已从 QQ 音乐歌单移除</string>
+  <string name="qq_playlist_partial">已完成 %1$d/%2$d 首，请刷新后重试未完成的歌曲</string>
+  <string name="qq_playlist_retry">重试</string>
+  <string name="qq_playlist_select">批量操作</string>
 </resources>

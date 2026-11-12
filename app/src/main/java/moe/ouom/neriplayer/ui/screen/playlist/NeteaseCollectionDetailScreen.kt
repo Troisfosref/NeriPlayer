@@ -1104,7 +1104,8 @@ internal fun SongRow(
     onPlayNext: () -> Unit,
     onAddToQueueEnd: () -> Unit,
     snackbarHostState: SnackbarHostState,
-    offlineMode: Boolean
+    offlineMode: Boolean,
+    extraMenuItems: @Composable (() -> Unit) -> Unit = {}
 ) {
     val context = LocalContext.current
     val composeResources = LocalResources.current
@@ -1155,6 +1156,7 @@ internal fun SongRow(
         // 更多操作菜单
         if (!selectionMode) {
             SongRowMoreMenu(
+                extraMenuItems = extraMenuItems,
                 song = song,
                 isFavorite = isFavorite,
                 onFavoriteToggle = onFavoriteToggle,
@@ -1258,6 +1260,7 @@ private fun SongRowTrailing(
 
 @Composable
 private fun SongRowMoreMenu(
+    extraMenuItems: @Composable (() -> Unit) -> Unit,
     song: SongItem,
     isFavorite: Boolean,
     onFavoriteToggle: (SongItem, Boolean) -> Unit,
@@ -1281,6 +1284,7 @@ private fun SongRowMoreMenu(
             expanded = showMoreMenu,
             onDismissRequest = { showMoreMenu = false }
         ) {
+            extraMenuItems { showMoreMenu = false }
             DropdownMenuItem(
                 text = { Text(stringResource(CoreCommonR.string.local_playlist_play_next)) },
                 leadingIcon = {

@@ -66,11 +66,13 @@ internal fun QQMusicPlaylistScreen(playlist:QQMusicPlaylist,onBack:()->Unit,onPl
     val autoShowKeyboard by moe.ouom.neriplayer.core.di.AppContainer.settingsRepo
         .autoShowKeyboardFlow.collectAsStateWithLifecycle(initialValue = false)
     var refresh by remember{mutableIntStateOf(0)}
+    androidx.lifecycle.compose.LifecycleEventEffect(androidx.lifecycle.Lifecycle.Event.ON_RESUME) { if (!publicCollection) refresh++ }
     val current by PlayerManager.currentSongFlow.collectAsStateWithLifecycle()
     val playing by PlayerManager.isPlayingFlow.collectAsStateWithLifecycle()
     val shuffle by PlayerManager.shuffleModeFlow.collectAsStateWithLifecycle()
     val repeat by PlayerManager.repeatModeFlow.collectAsStateWithLifecycle()
     val snackbar=remember{SnackbarHostState()}
+    val editing = rememberQQMusicPlaylistEditing(playlist, snackbar) { exitSelection() }
     val listState=rememberLazyListState()
     val searchUi=rememberPlaylistSearchUiState()
     var query by searchUi.query
@@ -100,7 +102,8 @@ internal fun QQMusicPlaylistScreen(playlist:QQMusicPlaylist,onBack:()->Unit,onPl
     }}
     val cover=playlist.cover ?: tracks.firstOrNull()?.coverUrl
     PlaylistModernDetailFrame(
-        header=PlaylistModernDetailHeader(playlist.id,"qq:${playlist.id}",playlist.title,cover,
+        header=PlaylistModernDetailHeader(playlist.id,"qq:${playlist.id}",
+            if (playlist.id == "favorites") stringResource(CoreR.string.qq_browse_liked) else playlist.title,cover,
             stringResource(CoreR.string.qq_browse_count,tracks.size),false,LocalHasCustomBackground.current),
         search=PlaylistModernDetailSearch(showSearch,{showSearch=it},query,{query=it},input,focus,autoShowKeyboard,
             headerFocused,{headerFocused=it},dockedFocused,{dockedFocused=it}),
@@ -129,6 +132,7 @@ internal fun QQMusicPlaylistScreen(playlist:QQMusicPlaylist,onBack:()->Unit,onPl
             }
         },
         selectionActions={
+            QQMusicPlaylistEditActions(editing, selectedSongs)
             HapticIconButton(onClick={
                 GlobalDownloadManager.startBatchDownload(context, selectedSongs)
                 exitSelection()
@@ -153,11 +157,16 @@ internal fun QQMusicPlaylistScreen(playlist:QQMusicPlaylist,onBack:()->Unit,onPl
                     current?.channelId==song.channelId&&current?.audioId==song.audioId,playing,lookup.contains(song),::toggleSong,
                     true,selectionMode,song.stableKey() in selectedKeys,{toggleSelection(song)},
                     {selectionMode=true;toggleSelection(song)},{onPlay(shown,index)}, {PlayerManager.addToQueueNext(song)},
-                    {PlayerManager.addToQueueEnd(song)},snackbar,false)}
+                    {PlayerManager.addToQueueEnd(song)},snackbar,false,
+                    extraMenuItems={close -> QQMusicSongEditMenu(editing,song,close) {
+                        selectionMode=true;toggleSelection(song)
+                    }})}
             }
             if(shown.isEmpty()&&!loading&&!failed)item{Text(stringResource(CoreR.string.qq_browse_empty))}
         },
-        overlays={if(showExport)PlaylistExportSheet(title=stringResource(CoreR.string.playlist_export_to_local),
+        overlays={
+            editing.overlays()
+            if(showExport)PlaylistExportSheet(title=stringResource(CoreR.string.playlist_export_to_local),
             playlists=allPlaylists.filterNot{LocalFilesPlaylist.isSystemPlaylist(it,context)},selectedCount=actionSongs.size,onDismissRequest={showExport=false},
             onCreateAndExport={name->scope.launch{local.createPlaylistWithSongs(name,actionSongs);showExport=false}},
             onExportToPlaylist={p->scope.launch{local.addSongsToPlaylist(p.id,actionSongs);showExport=false}})}

@@ -33,5 +33,5 @@
     <string name="cover_preview_zoom_hint">双指缩放 · 拖动查看</string>
     <string name="cover_preview_zoom_percent">%1$d%%</string>
     <string name="cover_preview_reset_zoom">重置缩放</string>
-    <string name="music_view_album">查看专辑 %s</string>
+    <string name="music_view_album">查看专辑</string>
 </resources>
