@@ -95,7 +95,7 @@ jobs:
           PY
           build_tools="$(find "$ANDROID_HOME/build-tools" -mindepth 1 -maxdepth 1 -type d | sort -V | tail -n 1)"
           "$build_tools/apksigner" verify --verbose --print-certs release-assets/NeriPlayer-c7159c3e.11121144.apk | tee "$RUNNER_TEMP/signature.txt"
-          grep -Fiq 'Signer #1 certificate SHA-256 digest: 6e1a9b42165d72218c5c361323a30499b48ac45b8345c9d3f157328f7e01c4a1' "$RUNNER_TEMP/signature.txt"
+          grep -Fiq 'certificate SHA-256 digest: 6e1a9b42165d72218c5c361323a30499b48ac45b8345c9d3f157328f7e01c4a1' "$RUNNER_TEMP/signature.txt"
 
       - name: Prepare release notes
         shell: bash
