@@ -1,0 +1,143 @@
+name: Publish verified QQ Music package
+
+on:
+  push:
+    branches: [release/qqmusic-c7159c3]
+    paths: [.github/workflows/publish_existing.yml]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: publish-qqmusic-c7159c3
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    if: github.repository == 'Troisfosref/NeriPlayer'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+      actions: read
+    env:
+      GH_TOKEN: ${{ github.token }}
+      REPO: Troisfosref/NeriPlayer
+      SOURCE_SHA: c7159c3eca6a958746258456f1cf1c8dfb7b89eb
+      SOURCE_RUN: '43150098377'
+      ARTIFACT_ID: '13913274593'
+      TAG: NeriPlayer-c7159c3e.11121144
+    steps:
+      - name: Checkout verified release tooling
+        uses: actions/checkout@v5
+        with:
+          ref: c7159c3eca6a958746258456f1cf1c8dfb7b89eb
+          persist-credentials: false
+          sparse-checkout: .github/scripts
+
+      - name: Confirm successful trusted source build
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh api "repos/$REPO/actions/runs/$SOURCE_RUN" > "$RUNNER_TEMP/source-run.json"
+          gh api "repos/$REPO/actions/artifacts/$ARTIFACT_ID" > "$RUNNER_TEMP/source-artifact.json"
+          python3 - <<'PY'
+          import json, os
+          from pathlib import Path
+          run = json.loads((Path(os.environ['RUNNER_TEMP']) / 'source-run.json').read_text())
+          artifact = json.loads((Path(os.environ['RUNNER_TEMP']) / 'source-artifact.json').read_text())
+          assert run['repository']['full_name'] == os.environ['REPO']
+          assert run['head_repository']['full_name'] == os.environ['REPO']
+          assert run['head_sha'] == os.environ['SOURCE_SHA']
+          assert run['head_branch'] == 'master' and run['event'] == 'push'
+          assert run['path'] == '.github/workflows/android_ci.yml'
+          assert run['status'] == 'completed' and run['conclusion'] == 'success'
+          assert artifact['name'] == 'neri-apk-signed' and not artifact['expired']
+          assert artifact['workflow_run']['id'] == int(os.environ['SOURCE_RUN'])
+          assert artifact['workflow_run']['head_sha'] == os.environ['SOURCE_SHA']
+          assert artifact['digest'] == 'sha256:9448b29c778443f1ca33f3bc9e87573ba153034e1c6c7bcdb603fb8bd71100ca'
+          PY
+
+      - name: Download the existing signed package
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh api "repos/$REPO/actions/artifacts/$ARTIFACT_ID/zip" > "$RUNNER_TEMP/release.zip"
+          python3 - <<'PY'
+          import hashlib, os, re, zipfile
+          from pathlib import Path
+          archive = Path(os.environ['RUNNER_TEMP']) / 'release.zip'
+          assert hashlib.sha256(archive.read_bytes()).hexdigest() == '9448b29c778443f1ca33f3bc9e87573ba153034e1c6c7bcdb603fb8bd71100ca'
+          with zipfile.ZipFile(archive) as z:
+              assert all(re.fullmatch(r'[A-Za-z0-9._+-]+', name) for name in z.namelist())
+              assert len(z.namelist()) == len(set(z.namelist())) == 4
+              z.extractall('release-assets')
+          PY
+
+      - name: Verify original package identity and signature
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -B .github/scripts/release_artifacts.py summary \
+            --metadata-file release-assets/build-metadata.json --status candidate \
+            --expected-sha "$SOURCE_SHA" --expected-build-uuid 7e02e8fc-4989-4420-815f-33993e5f325f
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          meta = json.loads(Path('release-assets/build-metadata.json').read_text())
+          assert meta['repository'] == 'Troisfosref/NeriPlayer'
+          assert meta['signing_mode'] == 'signed'
+          assert meta['build_version'] == 'c7159c3e.11121144'
+          assert meta['github_run_id'] == '43150098377'
+          assert meta['artifacts'] == [{
+              'name': 'NeriPlayer-c7159c3e.11121144.apk', 'abi': 'arm64-v8a', 'abis': ['arm64-v8a'],
+              'size': 15097034, 'sha256': 'fbd8cf95e878fcbbff8e316b52cac0f21b3206f57c61d0b96724c4883b982951'}]
+          PY
+          build_tools="$(find "$ANDROID_HOME/build-tools" -mindepth 1 -maxdepth 1 -type d | sort -V | tail -n 1)"
+          "$build_tools/apksigner" verify --verbose --print-certs release-assets/NeriPlayer-c7159c3e.11121144.apk | tee "$RUNNER_TEMP/signature.txt"
+          grep -Fiq 'Signer #1 certificate SHA-256 digest: 6e1a9b42165d72218c5c361323a30499b48ac45b8345c9d3f157328f7e01c4a1' "$RUNNER_TEMP/signature.txt"
+
+      - name: Prepare release notes
+        shell: bash
+        run: |
+          cat > release-notes.md <<'NOTES'
+          ## QQ 音乐版
+
+          集成 QQ 音乐登录、搜索、推荐、媒体库、专辑与歌手页面，沿用 NeriPlayer 原有界面与音质设置。
+
+          本次更新：
+          - 支持向 QQ 自建歌单和“我喜欢”添加歌曲，以及单曲、批量移除。
+          - 修复移除歌曲提示成功但未实际生效的问题，移除后读回云端歌单确认结果。
+          - 添加歌曲时，已包含所选歌曲的歌单置灰并禁止选择。
+          - 简化“查看专辑”菜单文字，QQ“我喜欢的音乐”统一显示为“我喜欢”。
+
+          安装包为 **arm64-v8a**，沿用此前 QQ 音乐版签名，可覆盖升级相同签名的版本。
+          此处发布的是已通过测试、构建与签名校验的原始安装包，未重新编译。
+          NOTES
+          python3 -B .github/scripts/release_artifacts.py notes \
+            --notes-file release-notes.md --metadata-file release-assets/build-metadata.json
+
+      - name: Upload and publish release
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh api --method POST "repos/$REPO/git/refs" -f "ref=refs/tags/$TAG" -f "sha=$SOURCE_SHA" > "$RUNNER_TEMP/created-tag.json"
+          gh release create "$TAG" release-assets/* --repo "$REPO" --verify-tag --target "$SOURCE_SHA" \
+            --title "NeriPlayer QQ 音乐版 · c7159c3e.11121144" --notes-file release-notes.md --draft
+          gh api "repos/$REPO/releases?per_page=100" > "$RUNNER_TEMP/releases.json"
+          gh api "repos/$REPO/git/ref/tags/$TAG" > "$RUNNER_TEMP/tag.json"
+          python3 - <<'PY'
+          import json, os
+          from pathlib import Path
+          root = Path(os.environ['RUNNER_TEMP'])
+          candidates = [r for r in json.loads((root / 'releases.json').read_text()) if r['tag_name'] == os.environ['TAG']]
+          assert len(candidates) == 1
+          release = candidates[0]
+          tag = json.loads((root / 'tag.json').read_text())
+          assert release['draft'] and not release['prerelease']
+          assert tag['object']['type'] == 'commit' and tag['object']['sha'] == os.environ['SOURCE_SHA']
+          local = {p.name: p.stat().st_size for p in Path('release-assets').iterdir()}
+          assert {a['name']: a['size'] for a in release['assets']} == local
+          PY
+          gh release edit "$TAG" --repo "$REPO" --draft=false --latest
+          gh release view "$TAG" --repo "$REPO" --json url,tagName,isDraft,isPrerelease,assets
