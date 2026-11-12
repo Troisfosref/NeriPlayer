@@ -1,6 +1,7 @@
 package moe.ouom.neriplayer.platform.qqmusic.playlist
 
 // PlaylistDetailWrite protocol adapted from HGODLK/MusicOne, GPL-3.0-or-later.
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.sync.Mutex
@@ -15,6 +16,7 @@ import moe.ouom.neriplayer.platform.qqmusic.api.QQMusicException
 import moe.ouom.neriplayer.platform.qqmusic.api.qqAccountId
 import moe.ouom.neriplayer.platform.qqmusic.api.qqMusicKey
 import moe.ouom.neriplayer.platform.qqmusic.auth.QQMusicAccountRepository
+import moe.ouom.neriplayer.platform.qqmusic.cache.loadQQMusicTrackPages
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -38,6 +40,19 @@ class QQMusicPlaylistEditor(
         return (listOf(QQMusicPlaylist("favorites", "我喜欢", directory = 201)) + created).distinctBy { it.id }
     }
 
+    /** Fresh complete membership: no stream URLs, cached rows or first-page-only guesses. */
+    suspend fun memberMids(playlist: QQMusicPlaylist): Set<String> {
+        val cookie = credentials()
+        val tracks = loadQQMusicTrackPages { offset -> browse.tracks(playlist, offset) }
+        requireAccount(cookie)
+        return tracks.map { requireNotNull(QQMusicSongRef.from(it)).mid }.toSet()
+    }
+
+    suspend fun containsSelection(playlist: QQMusicPlaylist, songs: List<SongItem>): Boolean {
+        val wanted = songs.map { requireNotNull(QQMusicSongRef.from(it)).mid }.toSet()
+        return wanted.isNotEmpty() && memberMids(playlist).containsAll(wanted)
+    }
+
     suspend fun update(id: String, songs: List<SongItem>, add: Boolean): QQMusicPlaylistEditResult = mutex.withLock {
         val cookie = credentials()
         val target = if (id == "favorites") QQMusicPlaylist(id, "我喜欢", directory = 201)
@@ -51,7 +66,8 @@ class QQMusicPlaylistEditor(
             val detail = client.songDetail(ref.mid, cookie)
             val songId = detail.optLong("id", detail.optLong("songid", 0))
             if (songId <= 0) throw QQMusicException(QQMusicException.Kind.REQUEST_FAILED)
-            JSONObject().put("songId", songId).put("songType", detail.optInt("type", ref.songType))
+            JSONObject().put("songId", songId)
+                .put("songType", qqMusicPlaylistWriteType(detail.optInt("type", ref.songType)))
         }
         val completed = mutableListOf<SongItem>()
         var attempted = false
@@ -69,7 +85,22 @@ class QQMusicPlaylistEditor(
                     val ret = response.optInt("retCode", -1)
                     if (!response.has("retCode") || ret != 0) throw QQMusicException(
                         QQMusicException.Kind.REQUEST_FAILED, ret.takeIf { it > 0 }?.toString())
-                    completed += chunk.map { unique[it] }
+                    val batch = chunk.map { unique[it] }
+                    if (add) completed += batch
+                    else {
+                        // QQ may acknowledge a no-op when the write type does not match.
+                        // Confirm absence, allowing a short read-only consistency window.
+                        var remaining = memberMids(target)
+                        for (retry in 0 until 2) {
+                            if (batch.none { requireNotNull(QQMusicSongRef.from(it)).mid in remaining }) break
+                            delay(250L)
+                            remaining = memberMids(target)
+                        }
+                        val removed = batch.filter { requireNotNull(QQMusicSongRef.from(it)).mid !in remaining }
+                        completed += removed
+                        if (removed.size != batch.size) return@withLock QQMusicPlaylistEditResult(
+                            completed, unique.size, QQMusicException(QQMusicException.Kind.REQUEST_FAILED))
+                    }
                 } catch (cancelled: CancellationException) { throw cancelled }
                 catch (error: Exception) {
                     return@withLock QQMusicPlaylistEditResult(completed, unique.size,
@@ -93,4 +124,14 @@ class QQMusicPlaylistEditor(
     private suspend fun requireAccount(cookie: String) {
         if (accounts.cookie() != cookie) throw QQMusicException(QQMusicException.Kind.LOGIN_REQUIRED)
     }
+}
+
+/** QQ read types and playlist-write types differ; ordinary read type 1 must be written as 0.
+ * Contract: L-1124/QQMusicApi commit 8d46735266ef81c5fbeccff15ddd211f7f966be6 (#306).
+ * Playback identity keeps the original type; this conversion is only for playlist writes.
+ */
+internal fun qqMusicPlaylistWriteType(readType: Int): Int = when (readType) {
+    0, 1 -> 0
+    5, 111, 112, 113 -> readType
+    else -> 1
 }

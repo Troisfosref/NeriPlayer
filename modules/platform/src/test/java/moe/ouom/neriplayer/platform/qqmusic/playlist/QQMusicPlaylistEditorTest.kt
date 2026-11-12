@@ -134,6 +134,67 @@ class QQMusicPlaylistEditorTest {
         Mockito.verify(f.accounts).notifyLibraryChanged()
     }
 
+    @Test fun `ordinary read type one removes the actual song using write type zero`() = runBlocking {
+        val f = Fixture()
+        val result = f.editor.update("123456", listOf(f.song(7)), false)
+        assertNull(result.error)
+        assertEquals(listOf(f.song(7)), result.completed)
+        assertFalse(7 in f.members)
+        val info = f.writes.single().getJSONObject("param").getJSONArray("v_songInfo").getJSONObject(0)
+        assertEquals(1007L, info.getLong("songId"))
+        assertEquals(0, info.getInt("songType"))
+        assertTrue(f.membershipReads > 0)
+    }
+
+    @Test fun `acknowledged deletion that leaves songs behind is never reported as success`() = runBlocking {
+        val f = Fixture()
+        f.keepOnDelete = setOf(1)
+        val result = f.editor.update("favorites", listOf(f.song(1), f.song(2)), false)
+        assertNotNull(result.error)
+        assertEquals(listOf(f.song(2)), result.completed)
+        assertEquals(2, result.total)
+        assertTrue(1 in f.members)
+        assertFalse(2 in f.members)
+        assertEquals(1, f.writes.size) // Verification retries reads, never repeats writes.
+        assertEquals(listOf("favorites"), f.invalidated)
+    }
+
+    @Test fun `batch removal verifies every chunk including final short chunk`() = runBlocking {
+        val f = Fixture()
+        val result = f.editor.update("favorites", (1..205).map(f::song), false)
+        assertNull(result.error)
+        assertEquals(205, result.completed.size)
+        assertTrue(f.members.isEmpty())
+        assertEquals(listOf(100, 100, 5), f.writes.map {
+            it.getJSONObject("param").getJSONArray("v_songInfo").length()
+        })
+    }
+
+    @Test fun `picker checks complete membership beyond page one and disables only fully present selection`() = runBlocking {
+        val f = Fixture()
+        val target = QQMusicPlaylist("123456", "Mine", directory = 42)
+        assertTrue(f.editor.containsSelection(target, listOf(f.song(201))))
+        assertTrue(f.membershipReads >= 3)
+        assertFalse(f.editor.containsSelection(target, listOf(f.song(201), f.song(206))))
+        assertTrue(f.editor.containsSelection(target, listOf(f.song(1), f.song(201))))
+        assertFalse(f.editor.containsSelection(target, emptyList()))
+        assertTrue(f.writes.isEmpty())
+    }
+
+    @Test fun `failed membership lookup does not turn an unknown playlist into an available target`() = runBlocking {
+        val f = Fixture()
+        f.membershipCode = 500
+        try { f.editor.containsSelection(QQMusicPlaylist("favorites", "Liked"), listOf(f.song(1))); fail("Unknown membership") }
+        catch (_: QQMusicException) { }
+        assertTrue(f.writes.isEmpty())
+    }
+
+    @Test fun `write types follow the client mapping including special types`() {
+        val expected = mapOf(0 to 0, 1 to 0, 2 to 1, 3 to 1, 4 to 1, 5 to 5,
+            6 to 1, 110 to 1, 111 to 111, 112 to 112, 113 to 113, 114 to 1)
+        expected.forEach { (read, write) -> assertEquals(write, qqMusicPlaylistWriteType(read)) }
+    }
+
     @Test fun `cache storage failure does not hide an acknowledged cloud change`() = runBlocking {
         val f = Fixture()
         val editor = QQMusicPlaylistEditor(f.accounts, f.client) { error("Storage unavailable") }
@@ -149,6 +210,10 @@ class QQMusicPlaylistEditorTest {
         var afterDetail: () -> Unit = {}
         var writeReply: (Int) -> JSONObject = { JSONObject().put("retCode", 0) }
         var writeCode = 0
+        val members = (1..205).toMutableSet()
+        var keepOnDelete = emptySet<Int>()
+        var membershipReads = 0
+        var membershipCode = 0
         val writes = mutableListOf<JSONObject>()
         val invalidated = mutableListOf<String>()
         init { Mockito.`when`(runBlocking { accounts.cookie() }).thenAnswer { cookie } }
@@ -165,10 +230,29 @@ class QQMusicPlaylistEditorTest {
                     val index = mid.removePrefix("song").toInt()
                     afterDetail()
                     envelope("songinfo", JSONObject().put("track_info", JSONObject()
-                        .put("id", if (badDetail == index) 0 else 1000 + index).put("type", 0)))
+                        .put("id", if (badDetail == index) 0 else 1000 + index).put("type", 1)))
+                } else if (body.has("playlist")) {
+                    membershipReads++
+                    val param = body.getJSONObject("playlist").getJSONObject("param")
+                    val offset = param.getInt("song_begin")
+                    val raw = JSONArray(members.sorted().drop(offset).take(100).map { index ->
+                        JSONObject().put("mid", "song$index").put("type", 1).put("id", 1000 + index)
+                    })
+                    envelope("playlist", JSONObject().put("songlist", raw).put("total_song_num", members.size), membershipCode)
                 } else {
-                    writes += body.getJSONObject("req_0")
-                    envelope("req_0", writeReply(writes.size), writeCode)
+                    val requestBody = body.getJSONObject("req_0")
+                    writes += requestBody
+                    val reply = writeReply(writes.size)
+                    if (writeCode == 0 && reply.optInt("retCode", -1) == 0 && requestBody.getString("method") == "DelSonglist") {
+                        val info = requestBody.getJSONObject("param").getJSONArray("v_songInfo")
+                        for (i in 0 until info.length()) {
+                            val item = info.getJSONObject(i)
+                            val index = item.getInt("songId") - 1000
+                            // Mirrors QQ's read type 1 / write type 0 mismatch: wrong type is an acknowledged no-op.
+                            if (item.getInt("songType") == 0 && index !in keepOnDelete) members.remove(index)
+                        }
+                    }
+                    envelope("req_0", reply, writeCode)
                 }
             }
             Response.Builder().request(request).protocol(Protocol.HTTP_1_1).code(200).message("OK")

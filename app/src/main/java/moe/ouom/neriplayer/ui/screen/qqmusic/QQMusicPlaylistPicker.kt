@@ -11,12 +11,16 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.launch
 import moe.ouom.neriplayer.common.R as CoreR
 import moe.ouom.neriplayer.core.di.AppContainer
@@ -43,12 +47,25 @@ internal fun QQMusicPlaylistPicker(songs: List<SongItem>, onDismiss: () -> Unit,
     var busy by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
     var request by remember { mutableIntStateOf(0) }
-    LaunchedEffect(request) {
-        loading = true; error = null
+    var available by remember(songs, account.savedAt) { mutableStateOf<Map<String, Boolean>>(emptyMap()) }
+    LaunchedEffect(request, songs, account.savedAt) {
+        loading = true; error = null; available = emptyMap()
         try { playlists = editor.writablePlaylists() }
         catch (cancelled: CancellationException) { throw cancelled }
         catch (e: Exception) { error = context.getString(qqPlaylistEditError(e)) }
         finally { loading = false }
+        val gate = Semaphore(3)
+        coroutineScope {
+            playlists.forEach { playlist -> launch {
+                gate.withPermit {
+                    try {
+                        val contains = editor.containsSelection(playlist, songs)
+                        available = available + (playlist.id to !contains)
+                    } catch (cancelled: CancellationException) { throw cancelled }
+                    catch (e: Exception) { error = context.getString(qqPlaylistEditError(e)) }
+                }
+            } }
+        }
     }
     AlertDialog(
         onDismissRequest = { if (!busy) onDismiss() },
@@ -63,8 +80,10 @@ internal fun QQMusicPlaylistPicker(songs: List<SongItem>, onDismiss: () -> Unit,
                 error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
                 LazyColumn(Modifier.heightIn(max = 360.dp)) {
                     items(playlists, key = { it.id }) { playlist ->
+                        val enabled = available[playlist.id] == true && !busy && !loading
                         Row(Modifier.fillMaxWidth().clip(neriRoundedShape(12.dp))
-                            .clickable(enabled = !busy && !loading) {
+                            .alpha(if (enabled) 1f else 0.38f)
+                            .clickable(enabled = enabled) {
                                 scope.launch {
                                     busy = true; error = null
                                     try {
