@@ -69,8 +69,9 @@ internal fun QQMusicPlaylistPicker(songs: List<SongItem>, onDismiss: () -> Unit,
                                     busy = true; error = null
                                     try {
                                         val result = editor.update(playlist.id, songs, add = true)
-                                        if (result.error == null) { onAdded(); onDismiss() }
-                                        else error = if (result.error.kind == QQMusicException.Kind.LOGIN_REQUIRED)
+                                        val failure = result.error
+                                        if (failure == null) { onAdded(); onDismiss() }
+                                        else error = if (failure.kind == QQMusicException.Kind.LOGIN_REQUIRED)
                                             context.getString(CoreR.string.qq_music_login_required)
                                         else context.getString(CoreR.string.qq_playlist_partial, result.completed.size, result.total)
                                     } catch (cancelled: CancellationException) { throw cancelled }
