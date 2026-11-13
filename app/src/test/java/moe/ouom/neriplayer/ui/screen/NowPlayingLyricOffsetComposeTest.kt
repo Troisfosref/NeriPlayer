@@ -12,6 +12,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import kotlinx.coroutines.flow.MutableStateFlow
 import moe.ouom.neriplayer.data.model.SongItem
 import moe.ouom.neriplayer.data.model.music.MusicPlatform
+import moe.ouom.neriplayer.data.model.qqmusic.QQMusicSongRef
 import moe.ouom.neriplayer.data.model.settings.lyrics.LyricSourcePreference
 import moe.ouom.neriplayer.data.settings.SettingsRepository
 import moe.ouom.neriplayer.ui.screen.nowplaying.lyrics.rememberNowPlayingLyricOffset
@@ -88,6 +89,26 @@ class NowPlayingLyricOffsetComposeTest {
             song = song.copy(matchedLyricSource = MusicPlatform.QQ_MUSIC)
         }
         assertOffset(350L)
+    }
+
+    @Test
+    fun `native QQ song applies changed global QQ offset live without a manual lyric match`() {
+        song = song.copy(channelId = QQMusicSongRef.CHANNEL, audioId = "catalogMid", userLyricOffsetMs = 0L)
+        render()
+        assertOffset(200L)
+        composeRule.runOnIdle { qq.value = -400L }
+        assertOffset(-400L)
+        composeRule.runOnIdle { cloud.value = 2_000L }
+        assertOffset(-400L)
+        composeRule.runOnIdle { song = song.copy(userLyricOffsetMs = 125L) }
+        assertOffset(-275L)
+        composeRule.runOnIdle { preferredSource = LyricSourcePreference.Kugou }
+        assertOffset(425L)
+        composeRule.runOnIdle {
+            preferredSource = null
+            song = song.copy(matchedLyricSource = MusicPlatform.CLOUD_MUSIC)
+        }
+        assertOffset(2_125L)
     }
 
     private fun render() {

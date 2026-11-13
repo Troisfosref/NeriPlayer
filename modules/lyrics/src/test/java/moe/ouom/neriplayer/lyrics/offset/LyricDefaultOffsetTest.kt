@@ -5,12 +5,34 @@ import moe.ouom.neriplayer.data.model.settings.lyrics.DEFAULT_QQ_MUSIC_LYRIC_OFF
 import moe.ouom.neriplayer.data.model.settings.lyrics.LyricSourcePreference
 
 import moe.ouom.neriplayer.data.model.music.MusicPlatform
+import moe.ouom.neriplayer.data.model.SongItem
+import moe.ouom.neriplayer.data.model.qqmusic.QQMusicSongRef
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class LyricDefaultOffsetTest {
+
+    @Test
+    fun nativeQqLyricsUseQqDefaultWithoutRequiringAManualMatch() {
+        val ref = QQMusicSongRef("catalogMid", "mediaMid")
+        val native = SongItem(ref.numericId, "Song", "Artist", "Album", 0L, 60_000L, null,
+            channelId = QQMusicSongRef.CHANNEL, audioId = ref.mid, mediaUri = ref.mediaUri,
+            userLyricOffsetMs = 75L)
+        assertNull(native.matchedLyricSource)
+        assertEquals(MusicPlatform.QQ_MUSIC, resolveSongLyricOffsetSource(native))
+        assertEquals(325L, resolveEffectiveLyricOffsetMs(
+            lyricSource = resolveSongLyricOffsetSource(native), cloudMusicDefaultOffsetMs = 1_000L,
+            qqMusicDefaultOffsetMs = 250L, userLyricOffsetMs = native.userLyricOffsetMs))
+        assertEquals(MusicPlatform.QQ_MUSIC, resolveSongLyricOffsetSource(native.copy(channelId = null)))
+        assertEquals(MusicPlatform.QQ_MUSIC, resolveSongLyricOffsetSource(native.copy(mediaUri = null)))
+        assertEquals(MusicPlatform.CLOUD_MUSIC,
+            resolveSongLyricOffsetSource(native.copy(matchedLyricSource = MusicPlatform.CLOUD_MUSIC)))
+        assertNull(resolveSongLyricOffsetSource(native.copy(channelId = null, mediaUri = null)))
+        assertNull(resolveSongLyricOffsetSource(null))
+    }
 
     @Test
     fun normalizeLyricDefaultOffsetMs_roundsToNearestStep() {

@@ -2,6 +2,7 @@ package moe.ouom.neriplayer.lyrics.output
 
 import moe.ouom.neriplayer.data.model.SongItem
 import moe.ouom.neriplayer.data.model.music.MusicPlatform
+import moe.ouom.neriplayer.data.model.qqmusic.QQMusicSongRef
 import moe.ouom.neriplayer.data.model.settings.lyrics.LyricSourcePreference
 import org.junit.Assert.assertEquals
 import org.junit.Test
@@ -22,6 +23,19 @@ class LyriconPreferencesTest {
         offsets.forEach { (source, expected) -> assertEquals(expected, preferences.offsetFor(song, source)) }
         assertEquals(220L, preferences.offsetFor(song.copy(matchedLyricSource = MusicPlatform.QQ_MUSIC), null))
         assertEquals(120L, preferences.offsetFor(song, null))
+    }
+
+    @Test
+    fun `native QQ lyric output follows QQ preferences and still honours resolved alternative lyrics`() {
+        val preferences = LyriconPreferences(true, cloudMusicOffsetMs = 1_000L, qqMusicOffsetMs = 200L,
+            kugouOffsetMs = 300L)
+        val native = song(25L).copy(channelId = QQMusicSongRef.CHANNEL, audioId = "catalogMid")
+        assertEquals(225L, preferences.offsetFor(native, null))
+        assertEquals(-75L, preferences.copy(qqMusicOffsetMs = -100L).offsetFor(native, null))
+        assertEquals(325L, preferences.offsetFor(native, LyricSourcePreference.Kugou))
+        assertEquals(1_025L, preferences.offsetFor(native, LyricSourcePreference.CloudMusic))
+        assertEquals(1_025L,
+            preferences.offsetFor(native.copy(matchedLyricSource = MusicPlatform.CLOUD_MUSIC), null))
     }
 
     @Test

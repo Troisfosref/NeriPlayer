@@ -1,5 +1,6 @@
 package moe.ouom.neriplayer.core.player.lyrics
 
+import moe.ouom.neriplayer.lyrics.offset.resolveSongLyricOffsetSource
 import moe.ouom.neriplayer.data.identity.sameIdentityAs
 import moe.ouom.neriplayer.data.identity.stableKey
 
@@ -169,7 +170,7 @@ private suspend fun PlayerManager.loadExternalTranslatedLyrics(
 }
 
 private fun PlayerManager.externalLyricOffsetMs(song: SongItem): Long = resolveEffectiveLyricOffsetMs(
-    lyricSource = song.matchedLyricSource,
+    lyricSource = resolveSongLyricOffsetSource(song),
     cloudMusicDefaultOffsetMs = cloudMusicLyricDefaultOffsetMs,
     qqMusicDefaultOffsetMs = qqMusicLyricDefaultOffsetMs,
     userLyricOffsetMs = song.userLyricOffsetMs,

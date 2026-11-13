@@ -1,5 +1,6 @@
 package moe.ouom.neriplayer.data.local.playlist
 
+import moe.ouom.neriplayer.lyrics.offset.resolveSongLyricOffsetSource
 import moe.ouom.neriplayer.data.model.sync.SyncSong
 import moe.ouom.neriplayer.data.sync.mapping.fromSongItemOrNull
 import moe.ouom.neriplayer.data.sync.identity.stableKey
@@ -1142,7 +1143,7 @@ class LocalPlaylistRepository private constructor(
                     val updatedSongs = playlist.songs.map { song ->
                         if (
                             shouldRebaseLyricOffsetForSource(
-                                lyricSource = song.matchedLyricSource,
+                                lyricSource = resolveSongLyricOffsetSource(song),
                                 targetSource = targetSource,
                                 userOffsetMs = song.userLyricOffsetMs
                             )

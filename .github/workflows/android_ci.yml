@@ -108,16 +108,17 @@ jobs:
             --tests 'moe.ouom.neriplayer.platform.search.api.codec.QQMusic*' \
             --tests 'moe.ouom.neriplayer.platform.search.api.client.QQMusicSearchApiTest' \
             --tests 'moe.ouom.neriplayer.platform.lyrics.repository.QQMusicLyricsRepositoryTest' \
-            :lyrics:testDebugUnitTest --tests '*parser*' \
+            :lyrics:testDebugUnitTest --tests '*parser*' --tests '*LyricDefaultOffsetTest' --tests '*LyriconPreferencesTest' \
             :playback:logic:testDebugUnitTest --tests '*PlaybackQualityOwnerTest' \
             :app:testDebugUnitTest --tests '*SettingsAccountProfilesTest' --tests '*SettingsAccountProfileNormalizationTest' \
             --tests '*QQMusicSearchIntegrationTest' --tests '*QQMusicCollectionFavoritesTest' --tests '*ExploreScreenYouTubeGateTest' \
             --tests '*ExploreSearchPaginationTest' --tests '*ExploreSearchHistoryDisplayTest' --tests '*ExploreLinkRecognizerTest' \
             --tests '*QQMusicArtistDetailViewModelTest' --tests '*QQMusicCollectionNavigationTest' --tests '*NeteaseArtistDetailContentTest' \
             --tests '*NeteaseArtistDetailViewModelLoadingTest' --tests '*NeteaseArtistDetailViewModelFollowTest' \
+            --tests '*NowPlayingLyricOffsetComposeTest' --tests '*AppLyricOffsetSettingsOwnerTest' \
             :download:runtime:testDebugUnitTest --tests '*QQMusicDownloadLyricsTest' \
             :model:testDebugUnitTest --tests '*StorageUsageModelsTest' \
-            :local:testDebugUnitTest --tests '*StorageUsageSummaryTest' --tests '*StorageUsageComponentsTest' --tests '*StorageUsageHostAdapterTest' \
+            :local:testDebugUnitTest --tests '*StorageUsageSummaryTest' --tests '*StorageUsageComponentsTest' --tests '*StorageUsageHostAdapterTest' --tests '*LocalPlaylistLyricOffsetRebaseTest' \
             :app:assembleRelease -PallowUnsignedRelease=true --warning-mode all --stacktrace
 
       - name: Sign compiled APK (trusted branch only)

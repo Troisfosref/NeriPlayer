@@ -2,6 +2,7 @@
 
 package moe.ouom.neriplayer.core.player.persistence
 
+import moe.ouom.neriplayer.lyrics.offset.resolveSongLyricOffsetSource
 import moe.ouom.neriplayer.data.model.playback.storage.PlayerDownloadedMetadataSyncOutcome
 import moe.ouom.neriplayer.data.identity.sameIdentityAs
 import moe.ouom.neriplayer.data.identity.stableKey
@@ -1247,7 +1248,7 @@ internal suspend fun PlayerManager.rebaseUserLyricOffsetsForSourceImpl(
         val rebasedPlaylist = playlist.map { song ->
             if (
                 !shouldRebaseLyricOffsetForSource(
-                    lyricSource = song.matchedLyricSource,
+                    lyricSource = resolveSongLyricOffsetSource(song),
                     targetSource = targetSource,
                     userOffsetMs = song.userLyricOffsetMs
                 )
@@ -1270,7 +1271,7 @@ internal suspend fun PlayerManager.rebaseUserLyricOffsetsForSourceImpl(
     val currentSongForRebase = currentSong
         ?.takeIf {
             shouldRebaseLyricOffsetForSource(
-                lyricSource = it.matchedLyricSource,
+                lyricSource = resolveSongLyricOffsetSource(it),
                 targetSource = targetSource,
                 userOffsetMs = it.userLyricOffsetMs
             )

@@ -5,6 +5,7 @@ import java.io.File
 import kotlinx.coroutines.test.runTest
 import moe.ouom.neriplayer.data.model.SongItem
 import moe.ouom.neriplayer.data.model.music.MusicPlatform
+import moe.ouom.neriplayer.data.model.qqmusic.QQMusicSongRef
 import moe.ouom.neriplayer.data.model.playlist.LocalPlaylist
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -40,6 +41,21 @@ class LocalPlaylistLyricOffsetRebaseTest : LocalPlaylistRepositoryTestSupport() 
 
         assertEquals(commits, storage.commitCount)
         assertEquals(mapOf(2L to listOf(120L)), offsets(repository))
+    }
+
+    @Test
+    fun `native QQ customized offsets are preserved by QQ changes and excluded from cloud rebasing`() = runTest {
+        val native = remoteNeteaseSong(id = 31L, name = "QQ Song").copy(
+            channelId = QQMusicSongRef.CHANNEL, audioId = "catalogMid", matchedLyricSource = null,
+            userLyricOffsetMs = 300L)
+        val untouched = native.copy(id = 32L, audioId = "otherMid", userLyricOffsetMs = 0L)
+        val storage = storageWith(playlist(3L, "Native QQ", native, untouched))
+        val repository = repository(storage)
+        repository.rebaseLyricOffsetsForSource(MusicPlatform.CLOUD_MUSIC, 100L, 250L)
+        assertEquals(mapOf(3L to listOf(300L, 0L)), offsets(repository))
+        repository.rebaseLyricOffsetsForSource(MusicPlatform.QQ_MUSIC, 100L, 250L)
+        assertEquals(mapOf(3L to listOf(150L, 0L)), offsets(repository))
+        assertEquals(offsets(repository), offsets(repository(storage)))
     }
 
     private fun song(id: Long, lyricSource: MusicPlatform, userOffsetMs: Long) =

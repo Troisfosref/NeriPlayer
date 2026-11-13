@@ -7,6 +7,8 @@ import moe.ouom.neriplayer.data.model.settings.lyrics.DEFAULT_LRCLIB_LYRIC_OFFSE
 import moe.ouom.neriplayer.data.model.settings.lyrics.LyricSourcePreference
 
 import moe.ouom.neriplayer.data.model.music.MusicPlatform
+import moe.ouom.neriplayer.data.model.SongItem
+import moe.ouom.neriplayer.data.model.qqmusic.isQQMusicSong
 import kotlin.math.roundToLong
 
 const val MIN_LYRIC_DEFAULT_OFFSET_MS = -5000L
@@ -18,6 +20,12 @@ fun normalizeLyricDefaultOffsetMs(value: Long): Long {
         (value.toDouble() / LYRIC_DEFAULT_OFFSET_STEP_MS).roundToLong() * LYRIC_DEFAULT_OFFSET_STEP_MS
     return stepAligned.coerceIn(MIN_LYRIC_DEFAULT_OFFSET_MS, MAX_LYRIC_DEFAULT_OFFSET_MS)
 }
+
+/** A native QQ song has no manual-match source; its own lyrics still use QQ defaults.
+ * Explicit matches take precedence, and a resolved alternate provider is selected by the caller.
+ */
+fun resolveSongLyricOffsetSource(song: SongItem?): MusicPlatform? =
+    song?.matchedLyricSource ?: MusicPlatform.QQ_MUSIC.takeIf { song?.isQQMusicSong() == true }
 
 internal fun resolveLyricDefaultOffsetMs(
     lyricSource: MusicPlatform?,

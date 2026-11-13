@@ -1,5 +1,6 @@
 package moe.ouom.neriplayer.lyrics.output
 
+import moe.ouom.neriplayer.lyrics.offset.resolveSongLyricOffsetSource
 import moe.ouom.neriplayer.data.model.SongItem
 import moe.ouom.neriplayer.data.model.settings.lyrics.DEFAULT_AMLL_TTML_LYRIC_OFFSET_MS
 import moe.ouom.neriplayer.data.model.settings.lyrics.DEFAULT_BILI_CC_SUBTITLE_LYRIC_OFFSET_MS
@@ -26,7 +27,7 @@ data class LyriconPreferences(
         isBiliCcSubtitleLyrics: Boolean = false
     ): Long {
         return resolveEffectiveLyricOffsetMs(
-            lyricSource = song.matchedLyricSource,
+            lyricSource = resolveSongLyricOffsetSource(song),
             cloudMusicDefaultOffsetMs = cloudMusicOffsetMs,
             qqMusicDefaultOffsetMs = qqMusicOffsetMs,
             userLyricOffsetMs = song.userLyricOffsetMs,

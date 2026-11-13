@@ -1,5 +1,6 @@
 package moe.ouom.neriplayer.ui.screen.nowplaying.lyrics
 
+import moe.ouom.neriplayer.lyrics.offset.resolveSongLyricOffsetSource
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
@@ -86,7 +87,7 @@ internal fun rememberNowPlayingLyricOffset(
     val biliOffset by repository.biliCcSubtitleLyricDefaultOffsetMsFlow
         .collectAsStateWithLifecycle(initialValue = DEFAULT_BILI_CC_SUBTITLE_LYRIC_OFFSET_MS)
     return resolveEffectiveLyricOffsetMs(
-        lyricSource = song?.matchedLyricSource,
+        lyricSource = resolveSongLyricOffsetSource(song),
         cloudMusicDefaultOffsetMs = cloudMusicOffset,
         qqMusicDefaultOffsetMs = qqMusicOffset,
         userLyricOffsetMs = song?.userLyricOffsetMs ?: 0L,
