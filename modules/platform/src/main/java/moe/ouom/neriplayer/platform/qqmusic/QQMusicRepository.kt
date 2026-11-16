@@ -46,8 +46,21 @@ class QQMusicRepository(
     }
 
     suspend fun playback(song: SongItem, preferredQualityOverride: QQMusicQuality? = null): SongUrlResult.Success = ticketMutex.withLock {
-        var ref = QQMusicSongRef.from(song) ?: throw QQMusicException(QQMusicException.Kind.NO_PLAY_URL)
         val cookie = accounts.cookie()
+        try {
+            resolvePlayback(song, preferredQualityOverride, cookie)
+        } catch (error: QQMusicException) {
+            if (error.kind != QQMusicException.Kind.LOGIN_REQUIRED &&
+                !(error.kind == QQMusicException.Kind.NO_PLAY_URL && error.diagnosticCode == "104003")) throw error
+            val renewed = accounts.renewRejectedCookie(cookie)
+            if (renewed.isNullOrBlank() || renewed == cookie) throw error
+            client.tracePlayback("phase=session_renewed")
+            resolvePlayback(song, preferredQualityOverride, renewed)
+        }
+    }
+
+    private suspend fun resolvePlayback(song: SongItem, preferredQualityOverride: QQMusicQuality?, cookie: String): SongUrlResult.Success {
+        var ref = QQMusicSongRef.from(song) ?: throw QQMusicException(QQMusicException.Kind.NO_PLAY_URL)
         client.tracePlayback("phase=resolve mid=${ref.mid} mediaMid=${ref.mediaMid.ifBlank { "missing" }} type=${ref.songType}")
         var refreshed = false
         var expectedDuration = song.durationMs
@@ -100,7 +113,7 @@ class QQMusicRepository(
                 client.tracePlayback("phase=selection mid=${ref.mid} quality=${quality.name} accepted=${urls.size} " +
                     "validationChecks=${mediaChecks.size} validationRejected=${mediaChecks.values.count { !it }}")
                 if (urls.isEmpty()) continue
-                return@withLock SongUrlResult.Success(
+                return SongUrlResult.Success(
                     url = urls.first(), candidateUrls = urls.drop(1), mimeType = quality.mimeType,
                     durationMs = expectedDuration.takeIf { it > 0 },
                     representationIdentity = "qqmusic:${ref.mid}:${quality.name}",

@@ -72,7 +72,8 @@ class QQMusicQrLoginTest {
                     requireNotNull(request.body).writeTo(buffer)
                     val envelope = JSONObject(buffer.readUtf8())
                     assertEquals("music-code", envelope.getJSONObject("qrLogin").getJSONObject("param").getString("code"))
-                    """{"code":0,"qrLogin":{"code":0,"data":{"musicid":456,"musickey":"music-key"}}}""".toByteArray()
+                    """{"code":0,"qrLogin":{"code":0,"data":{"musicid":456,"musickey":"music-key",
+                        "refresh_key":"renew-key","musickeyCreateTime":1000,"keyExpiresIn":259200}}}""".toByteArray()
                 }
                 else -> error("Unexpected QR request")
             }
@@ -84,6 +85,8 @@ class QQMusicQrLoginTest {
         val cookie = parseQQCookies(requireNotNull(result.cookie))
         assertEquals("456", cookie["musicid"])
         assertEquals("music-key", cookie["musickey"])
+        assertEquals("renew-key", cookie["refresh_key"])
+        assertEquals("259200", cookie["keyExpiresIn"])
         assertFalse(cookie.keys.any { it in setOf("qrsig", "p_skey", "graph_session") })
         assertEquals(6, calls.size)
     }

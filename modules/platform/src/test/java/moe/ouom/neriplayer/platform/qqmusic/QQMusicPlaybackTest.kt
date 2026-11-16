@@ -160,4 +160,54 @@ class QQMusicPlaybackTest {
         assertEquals(1,details)
     }
 
+    @Test fun `104003 retries playback once using renewed credentials`() = runBlocking {
+        assertRenewalPlayback(renewedPlayable = true)
+    }
+
+    @Test fun `104003 still refuses unavailable audio after a successful credential renewal`() = runBlocking {
+        assertRenewalPlayback(renewedPlayable = false)
+    }
+
+    private suspend fun assertRenewalPlayback(renewedPlayable: Boolean) {
+        val old = "musicid=123; musickey=old"
+        val fresh = "musicid=123; musickey=fresh"
+        var freshTickets = 0
+        val http = OkHttpClient.Builder().addInterceptor { chain ->
+            val buffer = Buffer(); requireNotNull(chain.request().body).writeTo(buffer)
+            val body = JSONObject(buffer.readUtf8())
+            val result = JSONObject().put("code",0)
+            if(body.has("songinfo")) {
+                result.put("songinfo",JSONObject().put("code",0).put("data",JSONObject()
+                    .put("track_info",JSONObject().put("mid","catalog").put("type",0)
+                        .put("file",JSONObject().put("media_mid","file")))))
+            } else {
+                val renewed = chain.request().header("Cookie") == fresh
+                if(renewed) freshTickets++
+                val available = renewed && renewedPlayable
+                result.put(if(body.has("req_0")) "req_0" else "req_1",JSONObject().put("code",0)
+                    .put("data",JSONObject().put("sip",JSONArray().put("https://isure.stream.qqmusic.qq.com/"))
+                        .put("midurlinfo",JSONArray().put(JSONObject().put("result",if(available) 0 else 104003)
+                            .put("purl",if(available) "M500file.mp3?vkey=fixture" else "")))))
+            }
+            Response.Builder().request(chain.request()).protocol(Protocol.HTTP_1_1).code(200).message("OK")
+                .body(result.toString().toResponseBody()).build()
+        }.build()
+        val accounts = Mockito.mock(QQMusicAccountRepository::class.java)
+        Mockito.`when`(accounts.cookie()).thenReturn(old)
+        Mockito.`when`(accounts.renewRejectedCookie(old)).thenReturn(fresh)
+        Mockito.`when`(accounts.quality()).thenReturn(QQMusicQuality.STANDARD)
+        val song = requireNotNull(mapQQMusicSong(JSONObject("""{"mid":"catalog","file":{"media_mid":"file"}}""")))
+        try {
+            val result = QQMusicRepository(accounts,QQMusicClient(http)).playback(song)
+            assertTrue(renewedPlayable)
+            assertTrue(result.url.contains("M500file.mp3"))
+            assertEquals(1,freshTickets)
+        } catch(error: QQMusicException) {
+            if(renewedPlayable) throw error
+            assertEquals(QQMusicException.Kind.NO_PLAY_URL,error.kind)
+            assertEquals("104003",error.diagnosticCode)
+            assertEquals(4,freshTickets)
+        }
+        Mockito.verify(accounts,Mockito.times(1)).renewRejectedCookie(old)
+    }
 }

@@ -268,7 +268,7 @@ object AppContainer {
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private const val YOUTUBE_DOWNLOAD_PLAYBACK_CALL_TIMEOUT_MS = 20_000L
 
-    val qqMusicAccounts by lazy { moe.ouom.neriplayer.platform.qqmusic.auth.QQMusicAccountRepository(application) }
+    val qqMusicAccounts by lazy { moe.ouom.neriplayer.platform.qqmusic.auth.QQMusicAccountRepository(application, sharedOkHttpClient) }
     val qqMusicSongNavigation by lazy {
         moe.ouom.neriplayer.platform.qqmusic.artist.QQMusicSongNavigationRepository(qqMusicAccounts,
             moe.ouom.neriplayer.platform.qqmusic.api.QQMusicClient(sharedOkHttpClient))

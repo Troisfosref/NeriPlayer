@@ -18,7 +18,7 @@ import moe.ouom.neriplayer.platform.qqmusic.api.qqMusicKey
 data class QQMusicAccountState(val signedIn: Boolean = false, val savedAt: Long = 0L)
 
 /** Auth is separate from playlists/backups. Fail closed if encrypted storage cannot be opened. */
-class QQMusicAccountRepository(context: Context) {
+class QQMusicAccountRepository(context: Context, client: okhttp3.OkHttpClient = okhttp3.OkHttpClient()) {
     private val mutableLibraryRevision = MutableStateFlow(0)
     val libraryRevision = mutableLibraryRevision.asStateFlow()
     fun notifyLibraryChanged() { mutableLibraryRevision.update { it + 1 } }
@@ -35,6 +35,10 @@ class QQMusicAccountRepository(context: Context) {
     }
     private val mutableState = MutableStateFlow(QQMusicAccountState())
     val state = mutableState.asStateFlow()
+    private val sessionClient = QQMusicSessionClient(client)
+    private val session = QQMusicSession(::storedCookie, ::replaceCookie, { cookie ->
+        sessionClient.renew(cookie, deviceId())
+    })
 
     suspend fun load() = withContext(Dispatchers.IO) {
         synchronized(this@QQMusicAccountRepository) {
@@ -45,8 +49,33 @@ class QQMusicAccountRepository(context: Context) {
         }
     }
 
-    suspend fun cookie(): String = withContext(Dispatchers.IO) {
+    suspend fun cookie(): String = session.cookie()
+
+    /** Only retry the exact rejected credential; a newer login may already have replaced it. */
+    suspend fun renewRejectedCookie(cookie: String): String = session.cookie(cookie)
+
+    private suspend fun storedCookie(): String = withContext(Dispatchers.IO) {
         synchronized(this@QQMusicAccountRepository) { preferences.getString("cookie", "").orEmpty() }
+    }
+
+    private suspend fun deviceId(): String = withContext(Dispatchers.IO) {
+        synchronized(this@QQMusicAccountRepository) {
+            preferences.getString("deviceId", null) ?: java.util.UUID.randomUUID().toString().replace("-", "").also {
+                check(preferences.edit().putString("deviceId", it).commit())
+            }
+        }
+    }
+
+    private suspend fun replaceCookie(expected: String, updated: String): Boolean = withContext(Dispatchers.IO) {
+        synchronized(this@QQMusicAccountRepository) {
+            if (preferences.getString("cookie", "").orEmpty() != expected) false else {
+                require(valid(updated) && qqAccountId(expected) == qqAccountId(updated))
+                val now = System.currentTimeMillis()
+                check(preferences.edit().putString("cookie", updated).putLong("savedAt", now).commit())
+                mutableState.value = QQMusicAccountState(true, now)
+                true
+            }
+        }
     }
 
     suspend fun save(raw: String) = withContext(Dispatchers.IO) {

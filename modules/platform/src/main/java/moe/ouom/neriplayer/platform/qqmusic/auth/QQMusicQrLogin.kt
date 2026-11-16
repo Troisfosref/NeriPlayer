@@ -115,13 +115,7 @@ class QQMusicQrLogin(client: OkHttpClient) {
         val result = root.optJSONObject("qrLogin") ?: fail()
         requireQQSuccess(result)
         val data = result.optJSONObject("data") ?: fail()
-        val id = listOf("musicid", "str_musicid", "musicId", "userid", "uin")
-            .firstNotNullOfOrNull { data.optString(it).takeIf { v -> v.isNotBlank() && v != "0" && v != "null" } } ?: fail()
-        val key = listOf("musickey", "music_key", "qqmusic_key", "qm_keyst", "strMusicKey")
-            .firstNotNullOfOrNull { data.optString(it).takeIf { v -> v.isNotBlank() && v != "null" } } ?: fail()
-        return mergeCookies("", response.cookies + mapOf("musicid" to id, "qqmusic_uin" to id,
-            "uin" to "o${id.removePrefix("o").padStart(10, '0')}", "musickey" to key,
-            "qqmusic_key" to key, "qm_keyst" to key, "authst" to key, "loginType" to "2"))
+        return qqSessionCookie(data.put("loginType", 2), mergeCookies("", response.cookies))
     }
 
     private class Reply(val text: String, val cookies: Map<String, String>, val location: String)
