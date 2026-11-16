@@ -48,6 +48,7 @@ class QQMusicRepository(
     suspend fun playback(song: SongItem, preferredQualityOverride: QQMusicQuality? = null): SongUrlResult.Success = ticketMutex.withLock {
         var ref = QQMusicSongRef.from(song) ?: throw QQMusicException(QQMusicException.Kind.NO_PLAY_URL)
         val cookie = accounts.cookie()
+        client.tracePlayback("phase=resolve mid=${ref.mid} mediaMid=${ref.mediaMid.ifBlank { "missing" }} type=${ref.songType}")
         var refreshed = false
         var expectedDuration = song.durationMs
         var durationRequested = false
@@ -58,6 +59,7 @@ class QQMusicRepository(
             ref = QQMusicSongRef(ref.mid, detail.optJSONObject("file")?.optString("media_mid").orEmpty(), detail.optInt("type", ref.songType))
             if (expectedDuration <= 0) expectedDuration = detail.optLong("interval") * 1000
             refreshed = true
+            client.tracePlayback("phase=metadata mid=${ref.mid} mediaMid=${ref.mediaMid.ifBlank { "missing" }} type=${ref.songType} durationMs=$expectedDuration")
         }
         if (ref.mediaMid.isBlank()) refresh()
         repeat(2) {
@@ -95,6 +97,8 @@ class QQMusicRepository(
                         candidates(true, enhanced = true).ifEmpty { candidates(false, enhanced = true) }
                     }
                 }
+                client.tracePlayback("phase=selection mid=${ref.mid} quality=${quality.name} accepted=${urls.size} " +
+                    "validationChecks=${mediaChecks.size} validationRejected=${mediaChecks.values.count { !it }}")
                 if (urls.isEmpty()) continue
                 return@withLock SongUrlResult.Success(
                     url = urls.first(), candidateUrls = urls.drop(1), mimeType = quality.mimeType,
@@ -105,6 +109,7 @@ class QQMusicRepository(
                         mimeType = quality.mimeType, codecLabel = quality.extension.uppercase(), bitrateKbps = quality.bitrateKbps)
                 )
             }
+            client.tracePlayback("phase=unavailable mid=${ref.mid} refreshed=$refreshed code=${upstreamRefusalCode ?: "none"}")
             if (refreshed) throw QQMusicException(QQMusicException.Kind.NO_PLAY_URL, upstreamRefusalCode?.toString())
             val old = ref
             refresh()

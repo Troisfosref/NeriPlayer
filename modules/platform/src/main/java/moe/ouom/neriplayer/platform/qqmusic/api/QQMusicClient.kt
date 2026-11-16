@@ -13,7 +13,12 @@ import org.json.JSONArray
 import org.json.JSONObject
 import java.util.UUID
 
-class QQMusicClient(private val client: OkHttpClient) {
+class QQMusicClient(
+    private val client: OkHttpClient,
+    private val playbackDiagnostics: (String) -> Unit = {}
+) {
+    private val ticketSequence = java.util.concurrent.atomic.AtomicLong()
+    internal fun tracePlayback(message: String) { runCatching { playbackDiagnostics(message) } }
     private val guid = UUID.randomUUID().toString().filter(Char::isDigit).take(10).padEnd(10, '0')
 
     suspend fun search(keyword: String, page: Int, cookie: String): JSONObject {
@@ -56,18 +61,36 @@ class QQMusicClient(private val client: OkHttpClient) {
                 .put("tmeLoginType", qqComm(cookie).optInt("tmeLoginType", 2))
             else -> null
         }
-        return post(if (standardVkey) "req_0" else "req_1",
-            when {
-                standardVkey -> "vkey.GetVkeyServer"
-                enhanced -> "music.vkey.GetEVkey"
-                else -> "music.vkey.GetVkey"
-            },
-            when {
-                standardVkey -> "CgiGetVkey"
-                enhanced -> "CgiGetEVkey"
-                else -> "UrlGetVkey"
-            },
-            params, cookie, compatibility || enhanced, ticketComm)
+        val ticket = ticketSequence.incrementAndGet()
+        val route = when { standardVkey -> "standard"; enhanced -> "evkey"; compatibility -> "web"; else -> "android" }
+        tracePlayback("ticket=$ticket phase=request route=$route mid=${qqPlaybackDiagnosticMid(mid)} " +
+            "mediaMid=${qqPlaybackDiagnosticMid(mediaMid)} type=$type wireType=${params.getJSONArray("songtype").optInt(0, -1)} " +
+            "quality=${quality.name} platform=${params.getString("platform")} files=${names.size} " +
+            "accountPresent=${qqAccountId(cookie).isNotBlank()} playbackKeyPresent=${qqMusicKey(cookie).isNotBlank()}")
+        val started = System.nanoTime()
+        try {
+            val response = post(if (standardVkey) "req_0" else "req_1",
+                when {
+                    standardVkey -> "vkey.GetVkeyServer"
+                    enhanced -> "music.vkey.GetEVkey"
+                    else -> "music.vkey.GetVkey"
+                },
+                when {
+                    standardVkey -> "CgiGetVkey"
+                    enhanced -> "CgiGetEVkey"
+                    else -> "UrlGetVkey"
+                },
+                params, cookie, compatibility || enhanced, ticketComm)
+            tracePlayback("ticket=$ticket phase=response route=$route elapsedMs=${(System.nanoTime()-started)/1_000_000} " +
+                qqPlaybackResponseDiagnostic(response))
+            return response
+        } catch (cancelled: CancellationException) { throw cancelled }
+        catch (error: Exception) {
+            val qq = error as? QQMusicException
+            val code = qq?.diagnosticCode?.takeIf { it.length in 1..8 && it.all(Char::isDigit) } ?: "none"
+            tracePlayback("ticket=$ticket phase=failure route=$route kind=${qq?.kind?.name ?: "TRANSPORT"} code=$code")
+            throw error
+        }
     }
 
     internal suspend fun isFullLength(url: String, expectedMs: Long, quality: QQMusicQuality): Boolean {

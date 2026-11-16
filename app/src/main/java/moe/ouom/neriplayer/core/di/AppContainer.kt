@@ -298,7 +298,9 @@ object AppContainer {
     }
     val qqMusicRepository by lazy {
         moe.ouom.neriplayer.platform.qqmusic.QQMusicRepository(qqMusicAccounts,
-            moe.ouom.neriplayer.platform.qqmusic.api.QQMusicClient(sharedOkHttpClient))
+            moe.ouom.neriplayer.platform.qqmusic.api.QQMusicClient(sharedOkHttpClient) { message ->
+                NPLogger.d("QQMusicPlayback", message)
+            })
     }
     val subsonicAccounts by lazy { SubsonicAccounts(application) }
     val subsonicRepository by lazy {
