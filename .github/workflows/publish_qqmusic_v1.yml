@@ -1,0 +1,137 @@
+name: Publish NeriPlayer for QQ v1.0.0
+
+on:
+  push:
+    branches: [release/qqmusic-v1.0.0]
+    paths: [.github/workflows/publish_qqmusic_v1.yml]
+
+permissions: {}
+
+concurrency:
+  group: publish-qqmusic-v1.0.0
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    if: github.repository == 'Troisfosref/NeriPlayer'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+      actions: read
+    env:
+      GH_TOKEN: ${{ github.token }}
+      REPO: Troisfosref/NeriPlayer
+      TAG: qqmusic-v1.0.0
+      TITLE: NeriPlayer for QQ v1.0.0
+      SOURCE_SHA: a0d854ae9632fda7394325b5b5e3557570db57f6
+      SOURCE_RUN: '44861552248'
+      ARTIFACT_ID: '14690592052'
+      ARCHIVE_SHA: 1e3b4c734b7b6f9082a0544bc9d2522320d2a4c1d16ef28389fc39e33cd6daf9
+      APK: NeriPlayer-a0d854ae.11211132.apk
+      OLD_RELEASE: '442487241'
+      OLD_TAG: NeriPlayer-c7159c3e.11121144
+    steps:
+      - name: Verify approved signed artifact
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh api "repos/$REPO/actions/runs/$SOURCE_RUN" > "$RUNNER_TEMP/source-run.json"
+          gh api "repos/$REPO/actions/artifacts/$ARTIFACT_ID" > "$RUNNER_TEMP/source-artifact.json"
+          gh api "repos/$REPO/actions/artifacts/$ARTIFACT_ID/zip" > "$RUNNER_TEMP/release.zip"
+          python3 - <<'PY'
+          import hashlib, json, os, zipfile
+          from pathlib import Path
+
+          tmp = Path(os.environ["RUNNER_TEMP"])
+          run = json.loads((tmp / "source-run.json").read_bytes())
+          artifact = json.loads((tmp / "source-artifact.json").read_bytes())
+          assert run["repository"]["full_name"] == run["head_repository"]["full_name"] == os.environ["REPO"]
+          assert (run["head_sha"], run["head_branch"], run["event"]) == (os.environ["SOURCE_SHA"], "master", "push")
+          assert run["conclusion"] == "success" and run["path"] == ".github/workflows/android_ci.yml"
+          assert artifact["name"] == "neri-apk-signed" and not artifact["expired"]
+          assert artifact["workflow_run"]["id"] == int(os.environ["SOURCE_RUN"])
+          archive = tmp / "release.zip"
+          assert hashlib.sha256(archive.read_bytes()).hexdigest() == os.environ["ARCHIVE_SHA"]
+          assert artifact["digest"] == "sha256:" + os.environ["ARCHIVE_SHA"]
+          expected = {os.environ["APK"], "SHA256SUMS.txt", "build-metadata.json", "build-metadata.txt"}
+          with zipfile.ZipFile(archive) as z:
+              assert len(z.namelist()) == len(expected) and set(z.namelist()) == expected
+              z.extractall("release-assets")
+          meta = json.loads(Path("release-assets/build-metadata.json").read_bytes())
+          assert meta["target_sha"] == os.environ["SOURCE_SHA"] and meta["signing_mode"] == "signed"
+          assert meta["github_run_id"] == os.environ["SOURCE_RUN"]
+          assert meta["artifacts"][0]["abis"] == ["arm64-v8a"]
+          PY
+          (cd release-assets && sha256sum --check --strict SHA256SUMS.txt)
+          build_tools="$(find "$ANDROID_HOME/build-tools" -mindepth 1 -maxdepth 1 -type d | sort -V | tail -n 1)"
+          "$build_tools/apksigner" verify --print-certs "release-assets/$APK" > "$RUNNER_TEMP/signature.txt"
+          grep -Fiq 'certificate SHA-256 digest: 6e1a9b42165d72218c5c361323a30499b48ac45b8345c9d3f157328f7e01c4a1' "$RUNNER_TEMP/signature.txt"
+
+      - name: Stage and publish the reviewed release
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat > "$RUNNER_TEMP/notes.md" <<'NOTES'
+          QQ 音乐已接入 NeriPlayer 原有的播放器和媒体库。
+
+          - **登录**：支持 QQ 扫码和 Cookie 导入。
+          - **搜索与详情**：支持搜索歌曲、专辑、歌手和歌单。
+          - **首页推荐**：提供每日推荐、猜你喜欢和推荐歌单，可在「设置 → 首页与启动 → QQ 音乐推荐」单独开关。
+          - **媒体库与歌单**：可浏览「我喜欢」、自建歌单和收藏歌单，支持向自己的 QQ 歌单添加歌曲，以及单首或批量移除。
+          - **播放、下载与歌词**：支持标准、高品质和无损音质，高档位无可用完整音源时自动降档。支持逐字歌词、翻译、罗马音和歌词延迟调整。
+          NOTES
+          tag_endpoint="repos/$REPO/git/ref/tags/$TAG"
+          if ! gh api "$tag_endpoint" > "$RUNNER_TEMP/new-tag.json"; then
+            gh api --method POST "repos/$REPO/git/refs" -f "ref=refs/tags/$TAG" -f "sha=$SOURCE_SHA" > "$RUNNER_TEMP/new-tag.json"
+          fi
+          jq -e --arg sha "$SOURCE_SHA" '.object.type == "commit" and .object.sha == $sha' "$RUNNER_TEMP/new-tag.json"
+          if ! gh release view "$TAG" --repo "$REPO" --json isDraft > "$RUNNER_TEMP/new-release.json"; then
+            gh release create "$TAG" release-assets/* --repo "$REPO" --verify-tag --target "$SOURCE_SHA" \
+              --title "$TITLE" --notes-file "$RUNNER_TEMP/notes.md" --draft
+          elif jq -e .isDraft "$RUNNER_TEMP/new-release.json" >/dev/null; then
+            gh release edit "$TAG" --repo "$REPO" --title "$TITLE" --notes-file "$RUNNER_TEMP/notes.md"
+            gh release upload "$TAG" release-assets/* --repo "$REPO" --clobber
+          fi
+          gh api "repos/$REPO/releases?per_page=100" > "$RUNNER_TEMP/releases.json"
+          jq -e --arg tag "$TAG" '[.[] | select(.tag_name == $tag)] | if length == 1 then .[0] else error("Unexpected release count") end' \
+            "$RUNNER_TEMP/releases.json" > "$RUNNER_TEMP/candidate.json"
+          python3 - <<'PY'
+          import hashlib, json, os
+          from pathlib import Path
+
+          tmp = Path(os.environ["RUNNER_TEMP"])
+          release = json.loads((tmp / "candidate.json").read_bytes())
+          assert release["name"] == os.environ["TITLE"] and not release["prerelease"]
+          assert release["body"].strip() == (tmp / "notes.md").read_text().strip()
+          actual = {a["name"]: (a["size"], a["digest"]) for a in release["assets"] if a["state"] == "uploaded"}
+          expected = {p.name: (p.stat().st_size, "sha256:" + hashlib.sha256(p.read_bytes()).hexdigest())
+                      for p in Path("release-assets").iterdir()}
+          assert actual == expected
+          PY
+          if jq -e .draft "$RUNNER_TEMP/candidate.json" >/dev/null; then
+            gh release edit "$TAG" --repo "$REPO" --draft=false --latest
+          fi
+
+      - name: Verify public release and remove the old release
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh api "repos/$REPO/releases/tags/$TAG" > "$RUNNER_TEMP/published.json"
+          gh api "repos/$REPO/releases/latest" > "$RUNNER_TEMP/latest.json"
+          jq -e --arg tag "$TAG" '.tag_name == $tag and (.draft | not) and (.prerelease | not)' "$RUNNER_TEMP/published.json"
+          jq -e --arg tag "$TAG" '.tag_name == $tag' "$RUNNER_TEMP/latest.json"
+          jq -e --slurpfile candidate "$RUNNER_TEMP/candidate.json" \
+            '.id == $candidate[0].id and .name == $candidate[0].name and .body == $candidate[0].body and
+                ([.assets[] | [.name,.size,.digest]] | sort) == ([$candidate[0].assets[] | [.name,.size,.digest]] | sort)' \
+            "$RUNNER_TEMP/published.json"
+          gh api "repos/$REPO/git/ref/tags/$OLD_TAG" > "$RUNNER_TEMP/old-tag.json"
+          old_endpoint="repos/$REPO/releases/$OLD_RELEASE"
+          if gh api "$old_endpoint" > "$RUNNER_TEMP/old-release.json"; then
+            jq -e --arg tag "$OLD_TAG" --argjson id "$OLD_RELEASE" \
+              '.id == $id and .tag_name == $tag and (.draft | not)' "$RUNNER_TEMP/old-release.json"
+            gh api --method DELETE "$old_endpoint"
+          fi
+          gh api "repos/$REPO/git/ref/tags/$OLD_TAG" > "$RUNNER_TEMP/old-tag-after.json"
+          jq -e --slurpfile old "$RUNNER_TEMP/old-tag.json" '.object == $old[0].object' "$RUNNER_TEMP/old-tag-after.json"
+          jq -r .html_url "$RUNNER_TEMP/published.json"
