@@ -102,11 +102,11 @@ import moe.ouom.neriplayer.core.player.prefetch.prefetchNextGenericTrackUrl
 import moe.ouom.neriplayer.core.player.resolver.youtube.YouTubeSeekRefreshPolicy
 import moe.ouom.neriplayer.core.player.url.currentPlaybackCacheKeyForRecovery
 import moe.ouom.neriplayer.core.player.url.shouldAdvanceAfterStuckTrackEnd
-import moe.ouom.neriplayer.core.player.url.shouldAttemptUrlRefresh
 import moe.ouom.neriplayer.core.player.url.shouldInvalidateCacheAfterPlaybackFailure
 import moe.ouom.neriplayer.core.player.url.shouldInvalidateCacheForPlaybackRecovery
 import moe.ouom.neriplayer.core.player.url.shouldRecoverMissingLocalPlayback
 import moe.ouom.neriplayer.core.player.url.shouldTreatPlaybackFailureAsTrackEnd
+import moe.ouom.neriplayer.core.player.url.tryBeginUrlRefreshAfterPlaybackError
 import moe.ouom.neriplayer.core.player.url.youtubePlaybackRecoveryStrategyForError
 import moe.ouom.neriplayer.core.player.usb.path.UsbExclusiveAudioPathTracker
 import moe.ouom.neriplayer.core.player.usb.recovery.PlayerManagerUsbExclusiveLivenessPort
@@ -576,7 +576,8 @@ private fun PlayerManager.initializePlaybackEngine(app: Application, effectiveMa
             NPLogger.w(
                 "NERI-PlaybackDecoder",
                 "audio underrun: bufferSize=$bufferSize, bufferMs=$bufferSizeMs, " +
-                    "elapsedSinceFeedMs=$elapsedSinceLastFeedMs"
+                    "elapsedSinceFeedMs=$elapsedSinceLastFeedMs, " +
+                    "bufferedMs=${eventTime.totalBufferedDurationMs}"
             )
         }
 
@@ -730,7 +731,7 @@ private fun PlayerManager.initializePlaybackEngine(app: Application, effectiveMa
                 return
             }
 
-            if (shouldAttemptUrlRefresh(error, currentSong, isOfflineCache)) {
+            if (tryBeginUrlRefreshAfterPlaybackError(error, currentSong, isOfflineCache)) {
                 val youtubeRecoveryStrategy = youtubePlaybackRecoveryStrategyForError(
                     error = error,
                     song = currentSong,

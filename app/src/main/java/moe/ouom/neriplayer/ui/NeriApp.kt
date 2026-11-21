@@ -214,7 +214,7 @@ import moe.ouom.neriplayer.ui.theme.background.CustomBackground
 import moe.ouom.neriplayer.data.model.settings.appearance.UiStyle
 import moe.ouom.neriplayer.ui.animation.LocalSharedCoverFlight
 import moe.ouom.neriplayer.ui.animation.SharedCoverFlightState
-import moe.ouom.neriplayer.ui.effect.glass.rememberLiquidGlassDeviceAllowed
+import moe.ouom.neriplayer.ui.effect.glass.rememberVisualEffectsDeviceProfile
 import moe.ouom.neriplayer.ui.navigation.LocalPredictiveBackPreviewEnabled
 import moe.ouom.neriplayer.ui.navigation.PredictiveBackPreviewGate
 import moe.ouom.neriplayer.ui.theme.reveal.shouldReverseThemeReveal
@@ -397,7 +397,7 @@ private fun NeriAppContent(
     val storedForceDark by repo.forceDarkFlow.collectAsStateWithLifecycle(
         initialValue = initialThemeSnapshot.forceDark
     )
-    val (uiStyle, liquidGlassEnabled, predictiveBackPreviewEnabled) =
+    val (uiStyle, liquidGlassEnabled, predictiveBackPreviewEnabled, enhancedVisualEffectsEnabled) =
         rememberAppStylePreferences(repo, initialThemeSnapshot.uiStyle)
     var showNowPlaying by rememberSaveable { mutableStateOf(false) }
     var nowPlayingOverlayMounted by remember { mutableStateOf(showNowPlaying) }
@@ -884,8 +884,11 @@ private fun NeriAppContent(
         defaultStartDestination ?: initialMainStartDestination
     val backgroundGlassBackdrop = rememberAdvancedGlassBackdrop()
     val contentGlassBackdrop = rememberAdvancedGlassBackdrop()
-    val liquidGlassDeviceAllowed = rememberLiquidGlassDeviceAllowed(advancedBlurQuality)
-    val liquidGlassRequested = uiStyle == UiStyle.Clean && liquidGlassEnabled && liquidGlassDeviceAllowed
+    val visualEffectsDeviceProfile = rememberVisualEffectsDeviceProfile()
+    val liquidGlassRequested = uiStyle == UiStyle.Clean && liquidGlassEnabled &&
+        visualEffectsDeviceProfile.liquidGlassAllowed(advancedBlurQuality)
+    val enhancedVisualEffectsActive = uiStyle == UiStyle.Clean && enhancedVisualEffectsEnabled &&
+        visualEffectsDeviceProfile.enhancedVisualEffectsAllowed
     val advancedGlassController = remember(
         advancedBlurEnabled,
         enhancedAdvancedBlurEnabled,
@@ -1212,6 +1215,7 @@ private fun NeriAppContent(
             systemDark = systemDark,
             uiStyle = uiStyle,
             liquidGlass = advancedGlassController.isLiquidGlassEnabled,
+            enhancedEffects = enhancedVisualEffectsActive,
             // 揭示快照完全遮住界面，颜色直接落到目标值，避免与扩散动画争抢帧
             animateColors = themeRevealSnapshot == null
     ) {
@@ -1503,14 +1507,8 @@ private fun NeriAppContent(
                         biliPlaylistSourceRoute = ::biliPlaylistSourceRoute,
                         localPlaylistSourceRoute = ::localPlaylistSourceRoute,
                         coherentFeedbackEnabled = coherentFeedbackEnabled,
-                        renderScene = { revealTop, translationY, scale, sceneDepth, sceneContent ->
-                            navigationSceneRenderer.RenderMainTabNavigationScene(
-                                revealTop,
-                                translationY,
-                                scale,
-                                sceneDepth = sceneDepth,
-                                content = sceneContent
-                            )
+                        renderScene = { sceneMotion, sceneDepth, sceneContent ->
+                            navigationSceneRenderer.RenderMainTabNavigationScene(sceneMotion, sceneDepth, sceneContent)
                         }
                     )
                 }
@@ -1527,14 +1525,8 @@ private fun NeriAppContent(
                         onSongAddToQueueEnd = ::addSongToQueueEndFromSearch,
                         onPlayParts = ::playBiliPartsAndOpenNowPlaying,
                         coherentFeedbackEnabled = coherentFeedbackEnabled,
-                        renderScene = { revealTop, translationY, scale, sceneDepth, sceneContent ->
-                            navigationSceneRenderer.RenderMainTabNavigationScene(
-                                revealTop,
-                                translationY,
-                                scale,
-                                sceneDepth = sceneDepth,
-                                content = sceneContent
-                            )
+                        renderScene = { sceneMotion, sceneDepth, sceneContent ->
+                            navigationSceneRenderer.RenderMainTabNavigationScene(sceneMotion, sceneDepth, sceneContent)
                         }
                     )
                 }
@@ -1556,14 +1548,8 @@ private fun NeriAppContent(
                         },
                         offlineMode = offlineMode,
                         coherentFeedbackEnabled = coherentFeedbackEnabled,
-                        renderScene = { revealTop, translationY, scale, sceneDepth, sceneContent ->
-                            navigationSceneRenderer.RenderMainTabNavigationScene(
-                                revealTop,
-                                translationY,
-                                scale,
-                                sceneDepth = sceneDepth,
-                                content = sceneContent
-                            )
+                        renderScene = { sceneMotion, sceneDepth, sceneContent ->
+                            navigationSceneRenderer.RenderMainTabNavigationScene(sceneMotion, sceneDepth, sceneContent)
                         }
                     )
                 }
@@ -1588,12 +1574,8 @@ private fun NeriAppContent(
                         ),
                         onBackgroundImageAlphaPreview = { pendingBackgroundImageAlpha = it },
                         snackbarHostState = snackbarHostState,
-                        renderScene = { revealTop, translationY, scale, sceneDepth, sceneContent ->
-                            navigationSceneRenderer.RenderMainTabNavigationScene(
-                                revealTop, translationY, scale,
-                                sceneDepth = sceneDepth,
-                                content = sceneContent
-                            )
+                        renderScene = { sceneMotion, sceneDepth, sceneContent ->
+                            navigationSceneRenderer.RenderMainTabNavigationScene(sceneMotion, sceneDepth, sceneContent)
                         }
                     )
                 }
@@ -1860,7 +1842,8 @@ private fun NeriAppContent(
                             paletteStyle = themePaletteStyle,
                             colorSpec = themeColorSpec,
                             uiStyle = uiStyle,
-                            liquidGlass = advancedGlassController.isLiquidGlassEnabled
+                            liquidGlass = advancedGlassController.isLiquidGlassEnabled,
+                            enhancedEffects = enhancedVisualEffectsActive
                         ),
                         background = NowPlayingOverlayBackground(
                             blurEnabled = nowPlayingCoverBlurBackgroundEnabled,
