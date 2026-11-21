@@ -81,21 +81,10 @@ jobs:
           - **媒体库与歌单**：可浏览「我喜欢」、自建歌单和收藏歌单，支持向自己的 QQ 歌单添加歌曲，以及单首或批量移除。
           - **播放、下载与歌词**：支持标准、高品质和无损音质，高档位无可用完整音源时自动降档。支持逐字歌词、翻译、罗马音和歌词延迟调整。
           NOTES
-          tag_endpoint="repos/$REPO/git/ref/tags/$TAG"
-          if ! gh api "$tag_endpoint" > "$RUNNER_TEMP/new-tag.json"; then
-            gh api --method POST "repos/$REPO/git/refs" -f "ref=refs/tags/$TAG" -f "sha=$SOURCE_SHA" > "$RUNNER_TEMP/new-tag.json"
-          fi
+          gh api "repos/$REPO/git/ref/tags/$TAG" > "$RUNNER_TEMP/new-tag.json"
           jq -e --arg sha "$SOURCE_SHA" '.object.type == "commit" and .object.sha == $sha' "$RUNNER_TEMP/new-tag.json"
-          if ! gh release view "$TAG" --repo "$REPO" --json isDraft > "$RUNNER_TEMP/new-release.json"; then
-            gh release create "$TAG" release-assets/* --repo "$REPO" --verify-tag --target "$SOURCE_SHA" \
-              --title "$TITLE" --notes-file "$RUNNER_TEMP/notes.md" --draft
-          elif jq -e .isDraft "$RUNNER_TEMP/new-release.json" >/dev/null; then
-            gh release edit "$TAG" --repo "$REPO" --title "$TITLE" --notes-file "$RUNNER_TEMP/notes.md"
-            gh release upload "$TAG" release-assets/* --repo "$REPO" --clobber
-          fi
-          gh api "repos/$REPO/releases?per_page=100" > "$RUNNER_TEMP/releases.json"
-          jq -e --arg tag "$TAG" '[.[] | select(.tag_name == $tag)] | if length == 1 then .[0] else error("Unexpected release count") end' \
-            "$RUNNER_TEMP/releases.json" > "$RUNNER_TEMP/candidate.json"
+          gh api "repos/$REPO/releases/453431836" > "$RUNNER_TEMP/candidate.json"
+          jq -e --arg tag "$TAG" '.tag_name == $tag' "$RUNNER_TEMP/candidate.json"
           python3 - <<'PY'
           import hashlib, json, os
           from pathlib import Path
@@ -110,15 +99,20 @@ jobs:
           assert actual == expected
           PY
           if jq -e .draft "$RUNNER_TEMP/candidate.json" >/dev/null; then
-            gh release edit "$TAG" --repo "$REPO" --draft=false --latest
+            gh api --method PATCH "repos/$REPO/releases/453431836" -F draft=false -f make_latest=true > "$RUNNER_TEMP/publish-response.json"
+            jq -e '.draft | not' "$RUNNER_TEMP/publish-response.json"
           fi
 
       - name: Verify public release and remove the old release
         shell: bash
         run: |
           set -euo pipefail
-          gh api "repos/$REPO/releases/tags/$TAG" > "$RUNNER_TEMP/published.json"
-          gh api "repos/$REPO/releases/latest" > "$RUNNER_TEMP/latest.json"
+          for attempt in 1 2 3 4 5; do
+            if gh api "repos/$REPO/releases/tags/$TAG" > "$RUNNER_TEMP/published.json" &&
+              gh api "repos/$REPO/releases/latest" > "$RUNNER_TEMP/latest.json" &&
+              jq -e --arg tag "$TAG" '.tag_name == $tag' "$RUNNER_TEMP/latest.json"; then break; fi
+            sleep 2
+          done
           jq -e --arg tag "$TAG" '.tag_name == $tag and (.draft | not) and (.prerelease | not)' "$RUNNER_TEMP/published.json"
           jq -e --arg tag "$TAG" '.tag_name == $tag' "$RUNNER_TEMP/latest.json"
           jq -e --slurpfile candidate "$RUNNER_TEMP/candidate.json" \
